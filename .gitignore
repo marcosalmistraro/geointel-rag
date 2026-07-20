@@ -1,0 +1,20 @@
+# Environment
+.env
+venv/
+__pycache__/
+*.pyc
+
+# Data
+data/raw/
+data/processed/
+
+# Models
+*.bin
+*.pkl
+
+# MLflow
+mlruns/
+
+# OS
+.DS_Store
+Thumbs.db
