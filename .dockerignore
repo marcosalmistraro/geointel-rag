@@ -1,0 +1,21 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Secrets — never bake into an image
+.env
+
+# Raw data is large and not needed at runtime (processed files are included)
+data/raw/
+
+# MLflow experiment logs — not needed in the image
+mlruns/
+
+# Git history
+.git/
+
+# Dev-only
+notebooks/
+tests/

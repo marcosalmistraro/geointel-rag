@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 from api.schemas import IngestRequest, IngestResponse
 from ingestion.pipeline import run_pipeline
 from rag.chain import RAGChain
+from tracking.mlflow_utils import log_ingestion
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -33,6 +34,13 @@ def ingest(request: Request, body: IngestRequest) -> IngestResponse:
     # Hot-swap: replace the chain so the new index is live immediately
     request.app.state.chain = RAGChain()
     logger.info("Chain reloaded with fresh index (%d vectors)", result.index_vectors)
+
+    log_ingestion(
+        chunks_written=result.chunks_written,
+        index_vectors=result.index_vectors,
+        spatial_layers=result.spatial_layers,
+        duration_ms=round(result.duration_ms, 1),
+    )
 
     return IngestResponse(
         status="ok",

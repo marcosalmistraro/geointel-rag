@@ -33,8 +33,8 @@ class Settings(BaseSettings):
     api_port: int = Field(default=8000)
 
     # MLflow
-    mlflow_tracking_uri: str = Field(default="file:///tmp/mlruns")
-    mlflow_experiment_name: str = Field(default="geointel-finetune")
+    mlflow_tracking_uri: str = Field(default="mlruns")
+    mlflow_experiment_name: str = Field(default="geointel-rag")
 
     def ensure_dirs(self) -> None:
         """Create all data directories if they don't exist."""
