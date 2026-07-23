@@ -132,11 +132,12 @@ class Retriever:
 
         return "\n".join(lines)
 
-    def retrieve(self, query: str) -> str:
+    def retrieve(self, query: str, top_k: int | None = None) -> str:
         """
         Retrieve relevant chunks and return a formatted context string.
+        top_k overrides the instance default when provided.
         """
-        chunks = self.store.search(query, top_k=self.top_k)
+        chunks = self.store.search(query, top_k=top_k if top_k is not None else self.top_k)
 
         if not chunks:
             return "No relevant documents found."

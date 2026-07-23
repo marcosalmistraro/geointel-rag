@@ -7,7 +7,7 @@ Run with:
 
 import logging
 
-from ingestion.downloaders import hdx_buildings, hdx_shakemap, hdx_ocha_figures
+from ingestion.downloaders import hdx_buildings, hdx_shakemap, hdx_ocha_figures, reliefweb
 
 logging.basicConfig(
     level=logging.INFO,
@@ -19,13 +19,16 @@ logger = logging.getLogger(__name__)
 def main() -> None:
     logger.info("=== GeoIntel RAG — running all downloaders ===")
 
-    logger.info("--- 1/3 HOT OSM destroyed buildings ---")
+    logger.info("--- 1/4 ReliefWeb situation reports ---")
+    reliefweb.main()
+
+    logger.info("--- 2/4 HOT OSM destroyed buildings ---")
     hdx_buildings.main()
 
-    logger.info("--- 2/3 USGS ShakeMap intensity contours ---")
+    logger.info("--- 3/4 USGS ShakeMap intensity contours ---")
     hdx_shakemap.main()
 
-    logger.info("--- 3/3 OCHA key figures ---")
+    logger.info("--- 4/4 OCHA key figures ---")
     hdx_ocha_figures.main()
 
     logger.info("=== All downloaders complete ===")

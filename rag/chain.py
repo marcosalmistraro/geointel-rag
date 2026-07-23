@@ -27,10 +27,9 @@ from pathlib import Path
 
 import requests
 
-from rag.retriever import Retriever
-
 from dotenv import load_dotenv
-load_dotenv()
+
+from rag.retriever import Retriever
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +60,7 @@ class RAGChain:
         model_id: str = MODEL_ID,
         hf_token: str | None = None,
     ) -> None:
+        load_dotenv()
         self.retriever = retriever or Retriever()
         self.model_id = model_id
         self.hf_token = hf_token or os.getenv("HF_TOKEN", "")
@@ -79,31 +79,38 @@ class RAGChain:
             "inputs": prompt,
             "parameters": {
                 "max_new_tokens": 512,
-                "temperature": 0.2,      # low = more factual, less creative
-                "return_full_text": False, # return only the generated part
+                "temperature": 0.2,
+                "return_full_text": False,
             },
         }
 
-        response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
-        response.raise_for_status()
+        try:
+            response = requests.post(self.api_url, headers=headers, json=payload, timeout=60)
+            response.raise_for_status()
+        except requests.exceptions.ConnectionError as exc:
+            logger.warning("LLM unreachable (network): %s", exc)
+            return "[LLM unavailable — network error. Retrieval context is shown above.]"
+        except requests.exceptions.HTTPError as exc:
+            logger.warning("LLM HTTP error: %s", exc)
+            return f"[LLM error {response.status_code}: {response.text[:200]}]"
 
         result = response.json()
 
-        # HF returns a list of generated sequences
         if isinstance(result, list) and result:
             return result[0].get("generated_text", "").strip()
 
         return "No response generated."
 
-    def run(self, question: str) -> dict:
+    def run(self, question: str, top_k: int | None = None) -> dict:
         """
         Run the full RAG chain.
         Returns a dict with the answer and the context used.
+        top_k overrides the retriever default when provided.
         """
         logger.info("Query: %s", question)
 
         # 1. Retrieve
-        context = self.retriever.retrieve(question)
+        context = self.retriever.retrieve(question, top_k=top_k)
         logger.info("Retrieved context (%d chars)", len(context))
 
         # 2. Build prompt

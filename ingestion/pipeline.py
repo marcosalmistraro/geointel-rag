@@ -4,6 +4,7 @@ Ingestion pipeline orchestrator.
 Runs the full ingestion flow:
   1. Load spatial data (ShakeMap + buildings) → data/processed/spatial.pkl
   2. Load text reports (ReliefWeb) → chunk → data/processed/chunks.jsonl
+  3. Embed chunks → build FAISS index → data/processed/faiss_index.bin
 
 Run with:
     python -m ingestion.pipeline
@@ -14,11 +15,21 @@ from __future__ import annotations
 import json
 import logging
 import pickle
+import time
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ingestion.chunker import Chunk, chunk_records
 from ingestion.loaders.spatial import load_all_spatial
 from ingestion.loaders.text import load_all_reports
+
+
+@dataclass
+class PipelineResult:
+    spatial_layers: list[str] = field(default_factory=list)
+    chunks_written: int = 0
+    index_vectors: int = 0
+    duration_ms: float = 0.0
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,28 +55,66 @@ def save_chunks(chunks: list[Chunk], path: Path) -> None:
     logger.info("Saved %d chunks to %s", len(chunks), path)
 
 
-def run_pipeline() -> None:
+def _build_faiss_index(chunks: list[Chunk]) -> int:
+    """Embed chunks and write the FAISS index. Returns vector count."""
+    from rag.embedder import Embedder
+    from rag.vector_store import VectorStore
+
+    store = VectorStore(Embedder())
+    chunk_dicts = [c.to_dict() for c in chunks]
+    store.build(chunk_dicts)
+    store.save(
+        index_path=PROCESSED_DIR / "faiss_index.bin",
+        chunks_path=PROCESSED_DIR / "chunks.jsonl",
+    )
+    return store.index.ntotal
+
+
+def run_pipeline(rebuild_index: bool = True, force_index: bool = False) -> PipelineResult:
     logger.info("=== GeoIntel RAG — ingestion pipeline ===")
+    t0 = time.perf_counter()
+    result = PipelineResult()
 
     # 1. Spatial
-    logger.info("--- Step 1/2: spatial data ---")
+    logger.info("--- Step 1/3: spatial data ---")
     spatial = load_all_spatial()
     save_spatial(spatial, PROCESSED_DIR / "spatial.pkl")
+    result.spatial_layers = list(spatial.keys())
 
-    # 2. Text
-    logger.info("--- Step 2/2: text reports ---")
+    # 2. Text → chunks
+    logger.info("--- Step 2/3: text reports ---")
     records = load_all_reports()
+    chunks: list[Chunk] = []
     if records:
         chunks = chunk_records(records)
-        save_chunks(chunks, PROCESSED_DIR / "chunks.jsonl")
+        result.chunks_written = len(chunks)
+        # chunks.jsonl is written by _build_faiss_index via store.save,
+        # so only write it separately when skipping index build
+        if not rebuild_index:
+            save_chunks(chunks, PROCESSED_DIR / "chunks.jsonl")
     else:
         logger.warning("No text records found — chunks.jsonl not written")
         logger.warning("Re-run pipeline once ReliefWeb reports are downloaded")
 
-    # Summary
-    logger.info("=== Pipeline complete ===")
-    logger.info("  Spatial layers: %s", list(spatial.keys()))
-    logger.info("  Text chunks:    %d", len(chunks) if records else 0)
+    # 3. FAISS index
+    index_path = PROCESSED_DIR / "faiss_index.bin"
+    index_exists = index_path.exists()
+    if rebuild_index and chunks and (force_index or not index_exists):
+        logger.info("--- Step 3/3: building FAISS index ---")
+        result.index_vectors = _build_faiss_index(chunks)
+    elif index_exists:
+        import faiss
+        result.index_vectors = faiss.read_index(str(index_path)).ntotal
+        logger.info("--- Step 3/3: FAISS index already exists (%d vectors) — skipping ---", result.index_vectors)
+    else:
+        logger.info("--- Step 3/3: skipping index build (rebuild_index=False or no chunks) ---")
+
+    result.duration_ms = (time.perf_counter() - t0) * 1000
+    logger.info("=== Pipeline complete in %.0f ms ===", result.duration_ms)
+    logger.info("  Spatial layers: %s", result.spatial_layers)
+    logger.info("  Text chunks:    %d", result.chunks_written)
+    logger.info("  Index vectors:  %d", result.index_vectors)
+    return result
 
 
 if __name__ == "__main__":

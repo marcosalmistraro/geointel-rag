@@ -16,6 +16,8 @@ import time
 from pathlib import Path
 
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 logging.basicConfig(
     level=logging.INFO,
@@ -44,22 +46,37 @@ FIELDS = [
 ]
 
 
+def _session() -> requests.Session:
+    session = requests.Session()
+    retry = Retry(total=5, backoff_factor=2, status_forcelist=[429, 500, 502, 503, 504])
+    session.mount("https://", HTTPAdapter(max_retries=retry))
+    return session
+
+
 def fetch_page(disaster_id: str, offset: int, limit: int = 100) -> dict:
     """Fetch one page of results from the ReliefWeb API."""
-    response = requests.get(
-        API_URL,
-        params={
-            "appname": "PLACEHOLDER",  # TODO: replace with your app name
-            "limit": limit,
-            "offset": offset,
-            "filter[field]": "disaster.glide",
-            "filter[value]": disaster_id,
-            "fields[include][]": FIELDS,
-        },
-        timeout=30,
-    )
-    response.raise_for_status()
-    return response.json()
+    for attempt in range(1, 6):
+        try:
+            response = _session().get(
+                API_URL,
+                params={
+                    "appname": "Geo-RAG4J7-jGTlPXYKMIuZp",
+                    "limit": limit,
+                    "offset": offset,
+                    "filter[field]": "disaster.glide",
+                    "filter[value]": disaster_id,
+                    "fields[include][]": FIELDS,
+                },
+                timeout=30,
+            )
+            response.raise_for_status()
+            return response.json()
+        except (requests.exceptions.ChunkedEncodingError, requests.exceptions.ConnectionError) as exc:
+            if attempt == 5:
+                raise
+            wait = 2 ** attempt
+            logger.warning("Attempt %d failed (%s) — retrying in %ds", attempt, exc, wait)
+            time.sleep(wait)
 
 
 def download_disaster(disaster_id: str) -> int:
