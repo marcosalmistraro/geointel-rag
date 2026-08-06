@@ -285,7 +285,25 @@ with tab_ask:
             help="How many text passages from the reports to send to the LLM as context.",
         )
 
-        submit = st.button("Ask", type="primary", use_container_width=True)
+        if "history" not in st.session_state:
+            st.session_state.history = []
+
+        col_ask, col_export = st.columns([3, 1])
+        submit = col_ask.button("Ask", type="primary", use_container_width=True)
+
+        if st.session_state.history:
+            import io, csv
+            buf = io.StringIO()
+            writer = csv.DictWriter(buf, fieldnames=["question", "answer", "latency_ms"])
+            writer.writeheader()
+            writer.writerows(st.session_state.history)
+            col_export.download_button(
+                "Export CSV",
+                data=buf.getvalue(),
+                file_name="geointel_session.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
 
         if submit and question.strip():
             with st.spinner("Retrieving context and generating answer…"):
@@ -297,6 +315,12 @@ with tab_ask:
                     )
                     resp.raise_for_status()
                     data = resp.json()
+
+                    st.session_state.history.append({
+                        "question": question.strip(),
+                        "answer": data["answer"],
+                        "latency_ms": round(data["latency_ms"]),
+                    })
 
                     st.markdown("### Answer")
                     st.markdown(data["answer"])
@@ -327,6 +351,14 @@ with tab_ask:
 
         elif submit:
             st.warning("Please enter a question first.")
+
+        if len(st.session_state.history) > 1:
+            st.divider()
+            st.markdown("#### Session history")
+            for item in reversed(st.session_state.history[:-1]):
+                with st.expander(item["question"][:80]):
+                    st.markdown(item["answer"])
+                    st.caption(f"Latency: {item['latency_ms']} ms")
 
     with col_map:
         st.subheader("Affected area — ShakeMap + destroyed buildings")
