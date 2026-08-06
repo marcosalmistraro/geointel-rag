@@ -41,10 +41,10 @@ Streamlit frontend  ──POST /query──►  FastAPI backend
 **Data sources**
 | Source | Content |
 |--------|---------|
-| ReliefWeb API | Situation reports, Feb–May 2023 |
-| USGS ShakeMap | MMI intensity contours (M7.8 + M7.5) |
-| HOT OpenStreetMap | ~100 k destroyed/damaged buildings |
-| OCHA | Key humanitarian figures |
+| [ReliefWeb](https://reliefweb.int/) | Situation reports, Feb–May 2023 |
+| [USGS ShakeMap via HDX](https://data.humdata.org/dataset/50d93259-2d49-4f84-85e6-3cd0aa03dfaa) | MMI intensity contours (M7.8 + M7.5) |
+| [HOT OSM Destroyed Buildings](https://data.humdata.org/dataset/hotosm_tur_destroyed_buildings) | ~100 k destroyed/damaged buildings |
+| [OCHA Key Figures](https://data.humdata.org/dataset/turkiye-syria-earthquake-key-figures) | Key humanitarian figures |
 
 ---
 
