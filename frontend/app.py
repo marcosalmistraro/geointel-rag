@@ -57,7 +57,9 @@ def build_map() -> folium.Map:
     m = folium.Map(
         location=[37.0, 37.5],
         zoom_start=7,
-        tiles=None,   # no external tile CDN — works offline / behind corporate proxy
+        tiles=None,
+        width="100%",
+        height=540,
     )
     folium.TileLayer(
         tiles="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -208,7 +210,7 @@ with col_map:
         )
     else:
         m = build_map()
-        st_folium(m, use_container_width=True, height=560)
+        st_folium(m, use_container_width=True, height=540, returned_objects=[])
 
         n_buildings = len(spatial["buildings"])
         n_contours = len(spatial["shakemap"])
