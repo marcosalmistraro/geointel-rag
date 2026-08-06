@@ -11,9 +11,10 @@ Start with (keep the FastAPI server running in a separate terminal):
 
 from __future__ import annotations
 
-import json
+import json as _json
 import pickle
 import re
+import time
 from pathlib import Path
 
 import folium
@@ -24,6 +25,17 @@ from folium.plugins import MarkerCluster
 
 SPATIAL_PATH = Path("data/processed/spatial.pkl")
 DEFAULT_API_URL = "http://localhost:8000"
+
+PROVINCE_QUESTIONS = {
+    "Hatay": "What was the humanitarian situation in Hatay?",
+    "Kahramanmaraş": "What damage was reported in Kahramanmaraş?",
+    "Gaziantep": "How many people were displaced in Gaziantep?",
+    "Adıyaman": "What relief operations were conducted in Adıyaman?",
+    "Malatya": "What was the impact of the earthquake in Malatya?",
+    "Osmaniye": "What was the situation in Osmaniye after the earthquake?",
+    "Idlib (Syria)": "How did the earthquake affect Idlib in Syria?",
+    "Aleppo (Syria)": "What was the humanitarian situation in Aleppo after the earthquake?",
+}
 
 SOURCES = [
     {
@@ -186,7 +198,7 @@ def _build_map() -> folium.Map:
 
     shakemap = spatial["shakemap"]
     folium.GeoJson(
-        json.loads(shakemap.to_json()),
+        _json.loads(shakemap.to_json()),
         name="ShakeMap intensity",
         style_function=lambda feat: {
             "fillColor": _mmi_color(float(feat["properties"].get("mmi") or 0)),
@@ -253,29 +265,98 @@ with tab_ask:
     with col_qa:
         st.subheader("Ask a question")
 
+        st.caption(
+            "❓ **Ready-made** — pick from a list of pre-written questions.  \n"
+            "📍 **By province** — select a location to get a question about it.  \n"
+            "✏️ **Your own** — type whatever you want to ask.  \n"
+            "Choosing one locks the other two. Hit ✕ next to the label to clear it."
+        )
+
         if "question" not in st.session_state:
             st.session_state.question = ""
+        if "_input_mode" not in st.session_state:
+            st.session_state._input_mode = None
 
         def _apply_example():
             val = st.session_state._example_select
             if val != "— pick an example question —":
                 st.session_state.question = val
+                st.session_state._input_mode = "example"
+                st.session_state._province_select = "— or focus on a province —"
 
-        st.selectbox(
-            "example",
-            ["— pick an example question —"] + EXAMPLE_QUESTIONS,
-            key="_example_select",
-            on_change=_apply_example,
-            label_visibility="collapsed",
-        )
+        def _apply_province():
+            val = st.session_state._province_select
+            if val in PROVINCE_QUESTIONS:
+                st.session_state.question = PROVINCE_QUESTIONS[val]
+                st.session_state._input_mode = "province"
+                st.session_state._example_select = "— pick an example question —"
 
-        question = st.text_area(
-            "question",
-            key="question",
-            placeholder="Type your question or pick an example above…",
-            height=100,
-            label_visibility="collapsed",
-        )
+        def _on_question_change():
+            if st.session_state.question.strip():
+                st.session_state._input_mode = "manual"
+                st.session_state._example_select = "— pick an example question —"
+                st.session_state._province_select = "— or focus on a province —"
+            else:
+                st.session_state._input_mode = None
+
+        def _clear_example():
+            st.session_state._input_mode = None
+            st.session_state.question = ""
+            st.session_state._example_select = "— pick an example question —"
+
+        def _clear_province():
+            st.session_state._input_mode = None
+            st.session_state.question = ""
+            st.session_state._province_select = "— or focus on a province —"
+
+        def _clear_manual():
+            st.session_state._input_mode = None
+            st.session_state.question = ""
+
+        mode = st.session_state._input_mode
+
+        col_ex, col_ex_clr = st.columns([11, 1])
+        with col_ex:
+            st.selectbox(
+                "❓ Ready-made questions",
+                ["— pick an example question —"] + EXAMPLE_QUESTIONS,
+                key="_example_select",
+                on_change=_apply_example,
+                disabled=(mode in ("province", "manual")),
+            )
+        with col_ex_clr:
+            st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
+            if mode == "example":
+                st.button("✕", key="_clear_example", help="Clear", on_click=_clear_example)
+
+        col_prov, col_prov_clr = st.columns([11, 1])
+        with col_prov:
+            st.selectbox(
+                "📍 Focus on a province",
+                ["— or focus on a province —"] + list(PROVINCE_QUESTIONS.keys()),
+                key="_province_select",
+                on_change=_apply_province,
+                disabled=(mode in ("example", "manual")),
+            )
+        with col_prov_clr:
+            st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
+            if mode == "province":
+                st.button("✕", key="_clear_province", help="Clear", on_click=_clear_province)
+
+        col_ta, col_ta_clr = st.columns([11, 1])
+        with col_ta:
+            question = st.text_area(
+                "✏️ Write your own",
+                key="question",
+                placeholder="Type your question here…",
+                height=100,
+                on_change=_on_question_change,
+                disabled=(mode in ("example", "province")),
+            )
+        with col_ta_clr:
+            st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
+            if mode == "manual":
+                st.button("✕", key="_clear_manual", help="Clear", on_click=_clear_manual)
 
         top_k = st.slider(
             "Chunks to retrieve",
@@ -305,49 +386,76 @@ with tab_ask:
                 use_container_width=True,
             )
 
+        def _stream_query(q: str, k: int):
+            """Generator for st.write_stream(): yields text tokens from SSE stream."""
+            with requests.post(
+                f"{api_url}/query/stream",
+                json={"question": q, "top_k": k},
+                stream=True,
+                timeout=90,
+            ) as resp:
+                resp.raise_for_status()
+                for raw in resp.iter_lines():
+                    if not raw:
+                        continue
+                    line = raw.decode() if isinstance(raw, bytes) else raw
+                    if not line.startswith("data: "):
+                        continue
+                    payload = line[6:]
+                    if payload == "[DONE]":
+                        return
+                    try:
+                        event = _json.loads(payload)
+                        if event["type"] == "context":
+                            st.session_state._stream_context = event["value"]
+                        elif event["type"] == "token":
+                            yield event["value"]
+                    except _json.JSONDecodeError:
+                        pass
+
         if submit and question.strip():
-            with st.spinner("Retrieving context and generating answer…"):
-                try:
-                    resp = requests.post(
-                        f"{api_url}/query",
-                        json={"question": question.strip(), "top_k": top_k},
-                        timeout=90,
-                    )
-                    resp.raise_for_status()
-                    data = resp.json()
+            q = question.strip()
+            st.session_state._stream_context = ""
+            st.markdown("### Answer")
+            t0 = time.perf_counter()
+            try:
+                answer = st.write_stream(_stream_query(q, top_k))
+            except requests.exceptions.ConnectionError:
+                st.error(
+                    "Cannot reach the API. "
+                    "Make sure `uvicorn api.main:app --reload` is running."
+                )
+                answer = ""
+            except requests.exceptions.HTTPError as e:
+                st.error(f"API error {e.response.status_code}: {e.response.text[:300]}")
+                answer = ""
+            except Exception as e:
+                st.error(f"Unexpected error: {e}")
+                answer = ""
 
-                    st.session_state.history.append({
-                        "question": question.strip(),
-                        "answer": data["answer"],
-                        "latency_ms": round(data["latency_ms"]),
-                    })
+            latency_ms = round((time.perf_counter() - t0) * 1000)
+            if answer:
+                st.caption(f"Latency: {latency_ms} ms")
+                st.session_state.history.append({
+                    "question": q,
+                    "answer": answer,
+                    "latency_ms": latency_ms,
+                })
 
-                    st.markdown("### Answer")
-                    st.markdown(data["answer"])
-                    st.caption(f"Latency: {data['latency_ms']:.0f} ms")
-
-                    with st.expander("Retrieved context passages"):
-                        chunks, spatial = _parse_context(data["context"])
-                        for chunk in chunks:
-                            with st.container(border=True):
-                                st.markdown(
-                                    f"**[{chunk['index']}] {chunk['title']}**"
-                                    + (f"  `{chunk['date']}`" if chunk["date"] else "")
-                                )
-                                st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
-                        if spatial:
-                            st.markdown("**Geospatial context**")
-                            st.info(spatial)
-
-                except requests.exceptions.ConnectionError:
-                    st.error(
-                        "Cannot reach the API. "
-                        "Make sure `uvicorn api.main:app --reload` is running."
-                    )
-                except requests.exceptions.HTTPError as e:
-                    st.error(f"API error {e.response.status_code}: {e.response.text[:300]}")
-                except Exception as e:
-                    st.error(f"Unexpected error: {e}")
+            ctx = st.session_state.get("_stream_context", "")
+            if ctx:
+                with st.expander("Retrieved context passages"):
+                    chunks, spatial = _parse_context(ctx)
+                    for chunk in chunks:
+                        with st.container(border=True):
+                            st.markdown(
+                                f"**[{chunk['index']}] {chunk['title']}**"
+                                + (f"  `{chunk['date']}`" if chunk["date"] else "")
+                            )
+                            st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
+                    if spatial:
+                        st.markdown("**Geospatial context**")
+                        st.info(spatial)
 
         elif submit:
             st.warning("Please enter a question first.")

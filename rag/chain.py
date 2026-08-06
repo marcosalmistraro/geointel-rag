@@ -89,6 +89,50 @@ class RAGChain:
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
 
+    def stream(self, question: str, top_k: int | None = None):
+        """
+        Generator that yields (event_type, data) tuples.
+        First yields ("context", context_string), then ("token", token) per LLM token.
+        """
+        import json as _json
+
+        context = self.retriever.retrieve(question, top_k=top_k)
+        yield "context", context
+
+        headers = {
+            "Authorization": f"Bearer {self.groq_api_key}",
+            "Content-Type": "application/json",
+        }
+        payload = {
+            "model": self.model_id,
+            "messages": self._build_messages(question, context),
+            "max_tokens": 512,
+            "temperature": 0.2,
+            "stream": True,
+        }
+
+        try:
+            with requests.post(GROQ_API_URL, headers=headers, json=payload, stream=True, timeout=60) as resp:
+                resp.raise_for_status()
+                for line in resp.iter_lines():
+                    if line and line.startswith(b"data: "):
+                        data_str = line[6:].decode()
+                        if data_str == "[DONE]":
+                            return
+                        try:
+                            data = _json.loads(data_str)
+                            content = data["choices"][0]["delta"].get("content", "")
+                            if content:
+                                yield "token", content
+                        except _json.JSONDecodeError:
+                            pass
+        except requests.exceptions.ConnectionError as exc:
+            logger.warning("LLM unreachable (network): %s", exc)
+            yield "token", "[LLM unavailable — network error. Retrieval context is shown above.]"
+        except requests.exceptions.HTTPError as exc:
+            logger.warning("LLM HTTP error: %s", exc)
+            yield "token", f"[LLM error {resp.status_code}: {resp.text[:200]}]"
+
     def run(self, question: str, top_k: int | None = None) -> dict:
         """
         Run the full RAG chain.
