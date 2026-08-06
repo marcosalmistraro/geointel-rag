@@ -63,7 +63,7 @@ def build_map() -> folium.Map:
         tiles="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         attr="OpenStreetMap",
         name="Street map",
-        show=False,   # off by default; user can enable via layer control
+        show=True,
     ).add_to(m)
 
     spatial = load_spatial()
@@ -134,8 +134,8 @@ with st.sidebar:
     st.markdown("- OCHA key figures")
     st.divider()
     st.markdown("**Model**")
-    st.markdown("`microsoft/Phi-3-mini-4k-instruct`")
-    st.markdown("via HF Inference API")
+    st.markdown("`llama-3.1-8b-instant`")
+    st.markdown("via Groq API")
 
 # Two-column layout
 col_qa, col_map = st.columns([1, 1], gap="large")

@@ -22,7 +22,7 @@ MOCK_RUN_RESULT = {
 @pytest.fixture
 def mock_chain() -> MagicMock:
     chain = MagicMock()
-    chain.model_id = "microsoft/Phi-3-mini-4k-instruct"
+    chain.model_id = "llama-3.1-8b-instant"
     chain.run.return_value = MOCK_RUN_RESULT
     chain.retriever.store.index.ntotal = 21197
     return chain
@@ -51,7 +51,7 @@ def test_health_response_shape(client):
     data = client.get("/health").json()
     assert data["status"] == "ok"
     assert data["index_vectors"] == 21197
-    assert data["model_id"] == "microsoft/Phi-3-mini-4k-instruct"
+    assert data["model_id"] == "llama-3.1-8b-instant"
     assert "timestamp" in data
 
 
