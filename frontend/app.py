@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import pickle
+import re
 from pathlib import Path
 
 import folium
@@ -114,6 +115,34 @@ SOURCES = [
 ]
 
 
+EXAMPLE_QUESTIONS = [
+    "What was the humanitarian situation in Hatay?",
+    "How many people were displaced across the affected provinces?",
+    "What search and rescue operations were conducted?",
+    "What was the food security situation in Gaziantep?",
+    "How did the earthquake affect Syrian refugees?",
+]
+
+
+def _parse_context(context: str) -> tuple[list[dict], str]:
+    """Split the retriever context string into chunk dicts + geospatial block."""
+    parts = context.split("\n\nGeospatial context:")
+    spatial_text = parts[1].strip() if len(parts) > 1 else ""
+
+    raw_chunks = re.split(r"\n\n(?=\[\d+\])", parts[0].strip())
+    chunks = []
+    for raw in raw_chunks:
+        lines = raw.strip().split("\n", 1)
+        header = lines[0]
+        text = lines[1].strip() if len(lines) > 1 else ""
+        m = re.match(r"\[(\d+)\]\s+(.*?)\s+\(([^)]*)\)\s*$", header)
+        if m:
+            chunks.append({"index": int(m.group(1)), "title": m.group(2), "date": m.group(3), "text": text})
+        else:
+            chunks.append({"index": 0, "title": header, "date": "", "text": text})
+    return chunks, spatial_text
+
+
 # ── helpers ───────────────────────────────────────────────────────────────────
 
 def _mmi_color(mmi: float) -> str:
@@ -209,10 +238,6 @@ with st.sidebar:
     st.header("Configuration")
     api_url = st.text_input("API URL", value=DEFAULT_API_URL)
     st.divider()
-    st.markdown("**Data sources**")
-    for src in SOURCES:
-        st.markdown(f"- [{src['name']}]({src['homepage']})")
-    st.divider()
     st.markdown("**Model**")
     st.markdown("`llama-3.1-8b-instant`")
     st.markdown("via [Groq API](https://groq.com)")
@@ -229,15 +254,25 @@ with tab_ask:
     with col_qa:
         st.subheader("Ask a question")
 
+        # Example question buttons
+        if "question" not in st.session_state:
+            st.session_state.question = ""
+
+        st.caption("Try an example:")
+        ex_cols = st.columns(len(EXAMPLE_QUESTIONS))
+        for col, example in zip(ex_cols, EXAMPLE_QUESTIONS):
+            short = example.split(" ")[:4]
+            label = " ".join(short) + "…"
+            if col.button(label, use_container_width=True, help=example):
+                st.session_state.question = example
+                st.rerun()
+
         question = st.text_area(
             "question",
-            placeholder=(
-                "e.g. What was the humanitarian situation in Hatay?\n"
-                "e.g. How many people were displaced in Gaziantep?\n"
-                "e.g. What search and rescue operations were conducted?"
-            ),
-            label_visibility="collapsed",
+            key="question",
+            placeholder="Type your question or pick an example above…",
             height=100,
+            label_visibility="collapsed",
         )
 
         top_k = st.slider(
@@ -266,7 +301,17 @@ with tab_ask:
                     st.caption(f"Latency: {data['latency_ms']:.0f} ms")
 
                     with st.expander("Retrieved context passages"):
-                        st.text(data["context"])
+                        chunks, spatial = _parse_context(data["context"])
+                        for chunk in chunks:
+                            with st.container(border=True):
+                                st.markdown(
+                                    f"**[{chunk['index']}] {chunk['title']}**"
+                                    + (f"  `{chunk['date']}`" if chunk["date"] else "")
+                                )
+                                st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
+                        if spatial:
+                            st.markdown("**Geospatial context**")
+                            st.info(spatial)
 
                 except requests.exceptions.ConnectionError:
                     st.error(
