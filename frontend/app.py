@@ -165,8 +165,7 @@ def load_spatial() -> dict | None:
         return pickle.load(f)
 
 
-@st.cache_resource
-def build_map() -> folium.Map:
+def _build_map() -> folium.Map:
     m = folium.Map(
         location=[37.0, 37.5],
         zoom_start=7,
@@ -254,18 +253,21 @@ with tab_ask:
     with col_qa:
         st.subheader("Ask a question")
 
-        # Example question buttons
         if "question" not in st.session_state:
             st.session_state.question = ""
 
-        st.caption("Try an example:")
-        ex_cols = st.columns(len(EXAMPLE_QUESTIONS))
-        for col, example in zip(ex_cols, EXAMPLE_QUESTIONS):
-            short = example.split(" ")[:4]
-            label = " ".join(short) + "…"
-            if col.button(label, use_container_width=True, help=example):
-                st.session_state.question = example
-                st.rerun()
+        def _apply_example():
+            val = st.session_state._example_select
+            if val != "— pick an example question —":
+                st.session_state.question = val
+
+        st.selectbox(
+            "example",
+            ["— pick an example question —"] + EXAMPLE_QUESTIONS,
+            key="_example_select",
+            on_change=_apply_example,
+            label_visibility="collapsed",
+        )
 
         question = st.text_area(
             "question",
@@ -336,8 +338,9 @@ with tab_ask:
                 "Run `python -m ingestion.pipeline` first."
             )
         else:
-            m = build_map()
-            st_folium(m, use_container_width=True, height=540, returned_objects=[])
+            if "_folium_map" not in st.session_state:
+                st.session_state._folium_map = _build_map()
+            st_folium(st.session_state._folium_map, use_container_width=True, height=540, returned_objects=[])
 
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
