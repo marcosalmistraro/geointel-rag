@@ -19,8 +19,8 @@ from pathlib import Path
 import folium
 import requests
 import streamlit as st
+import streamlit.components.v1 as st_components
 from folium.plugins import MarkerCluster
-from streamlit_folium import st_folium
 
 SPATIAL_PATH = Path("data/processed/spatial.pkl")
 DEFAULT_API_URL = "http://localhost:8000"
@@ -370,9 +370,9 @@ with tab_ask:
                 "Run `python -m ingestion.pipeline` first."
             )
         else:
-            if "_folium_map" not in st.session_state:
-                st.session_state._folium_map = _build_map()
-            st_folium(st.session_state._folium_map, use_container_width=True, height=540, returned_objects=[])
+            if "_folium_map_html" not in st.session_state:
+                st.session_state._folium_map_html = _build_map()._repr_html_()
+            st_components.html(st.session_state._folium_map_html, height=560)
 
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
