@@ -133,6 +133,31 @@ SOURCES = [
 ]
 
 
+EVAL_TEST_CASES = [
+    {"question": "How many people were killed in the earthquake?",
+     "keywords": ["killed", "dead", "deaths", "casualties", "people"]},
+    {"question": "What was the humanitarian situation in Hatay?",
+     "keywords": ["hatay", "shelter", "displaced", "damage", "buildings"]},
+    {"question": "How many people were displaced by the earthquake?",
+     "keywords": ["displaced", "people", "shelter", "million"]},
+    {"question": "What search and rescue operations were conducted?",
+     "keywords": ["rescue", "search", "teams", "survivors"]},
+    {"question": "What was the food security situation in affected areas?",
+     "keywords": ["food", "aid", "distribution", "assistance"]},
+    {"question": "How did the earthquake affect Syrian refugees in Turkey?",
+     "keywords": ["refugees", "syrian", "turkey", "displaced"]},
+    {"question": "What was the scale of building destruction?",
+     "keywords": ["buildings", "destroyed", "collapsed", "damage"]},
+    {"question": "What international assistance was mobilised after the earthquake?",
+     "keywords": ["international", "aid", "teams", "support"]},
+    {"question": "What was the situation in Kahramanmaras after the earthquake?",
+     "keywords": ["kahramanmaras", "earthquake", "damage", "affected"]},
+    {"question": "What were the health and medical needs after the earthquake?",
+     "keywords": ["health", "medical", "hospital", "injuries"]},
+]
+
+EVAL_PASS_THRESHOLD = 0.5
+
 EXAMPLE_QUESTIONS = [
     "What was the humanitarian situation in Hatay?",
     "How many people were displaced across the affected provinces?",
@@ -270,7 +295,7 @@ with st.sidebar:
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
 
-tab_ask, tab_sources = st.tabs(["Ask", "Sources"])
+tab_ask, tab_sources, tab_eval = st.tabs(["Ask", "Sources", "Eval"])
 
 # ── Ask tab ───────────────────────────────────────────────────────────────────
 
@@ -594,3 +619,96 @@ with tab_sources:
                 st.link_button("Dataset", src["dataset"], use_container_width=True)
 
         st.divider()
+
+# ── Eval tab ──────────────────────────────────────────────────────────────────
+
+with tab_eval:
+    import pandas as pd
+
+    st.subheader("RAG Evaluation")
+    st.caption(
+        "Runs 10 test questions through the RAG chain and measures **keyword recall** — "
+        "how many expected keywords appear in the answer. "
+        f"Pass threshold: ≥ {EVAL_PASS_THRESHOLD:.0%}."
+    )
+
+    eval_model_label = st.selectbox(
+        "Model to evaluate",
+        list(AVAILABLE_MODELS.keys()),
+        key="_eval_model_select",
+    )
+    run_eval = st.button("Run evaluation", type="primary", key="_run_eval")
+
+    if run_eval:
+        model_id = AVAILABLE_MODELS[eval_model_label]
+        eval_results = []
+        progress = st.progress(0, text="Starting…")
+
+        for i, case in enumerate(EVAL_TEST_CASES):
+            progress.progress(
+                i / len(EVAL_TEST_CASES),
+                text=f"Question {i + 1}/{len(EVAL_TEST_CASES)}: {case['question'][:60]}…",
+            )
+            t0 = time.perf_counter()
+            try:
+                resp = requests.post(
+                    f"{api_url}/query",
+                    json={"question": case["question"], "top_k": 5, "model_id": model_id},
+                    timeout=120,
+                )
+                resp.raise_for_status()
+                answer = resp.json()["answer"]
+            except Exception as exc:
+                answer = f"[Error: {exc}]"
+            latency_ms = round((time.perf_counter() - t0) * 1000)
+            answer_lower = answer.lower()
+            found = [kw for kw in case["keywords"] if kw in answer_lower]
+            recall = len(found) / len(case["keywords"])
+            eval_results.append({
+                "question": case["question"],
+                "recall": round(recall, 3),
+                "passed": recall >= EVAL_PASS_THRESHOLD,
+                "found_keywords": ", ".join(found),
+                "latency_ms": latency_ms,
+                "answer": answer,
+            })
+
+        progress.progress(1.0, text="Done.")
+        st.session_state._eval_results = eval_results
+        st.session_state._eval_model_label = eval_model_label
+
+    if st.session_state.get("_eval_results"):
+        results = st.session_state._eval_results
+        label = st.session_state.get("_eval_model_label", "")
+
+        mean_recall = sum(r["recall"] for r in results) / len(results)
+        n_passed = sum(r["passed"] for r in results)
+        mean_latency = sum(r["latency_ms"] for r in results) / len(results)
+
+        st.divider()
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Mean recall", f"{mean_recall:.0%}")
+        m2.metric("Passed", f"{n_passed}/{len(results)}")
+        m3.metric("Mean latency", f"{mean_latency:.0f} ms")
+
+        df = pd.DataFrame(results)
+        df.index = [f"Q{i+1}" for i in range(len(df))]
+        st.bar_chart(df["recall"], height=220)
+
+        st.dataframe(
+            df[["question", "recall", "passed", "found_keywords", "latency_ms"]].rename(columns={
+                "question": "Question",
+                "recall": "Recall",
+                "passed": "Passed",
+                "found_keywords": "Keywords found",
+                "latency_ms": "Latency (ms)",
+            }),
+            use_container_width=True,
+            hide_index=False,
+        )
+
+        with st.expander("Full answers"):
+            for i, r in enumerate(results, 1):
+                st.markdown(f"**Q{i}. {r['question']}**")
+                st.markdown(r["answer"])
+                st.divider()
