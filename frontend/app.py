@@ -260,10 +260,12 @@ with st.sidebar:
     if compare_mode:
         model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
         model_b_label = st.selectbox("Model B", list(AVAILABLE_MODELS.keys()), index=1, key="_model_b")
+        active_model_id = None
     else:
         model_a_label = None
         model_b_label = None
-        st.markdown("`llama-3.1-8b-instant`")
+        active_model_label = st.selectbox("Model", list(AVAILABLE_MODELS.keys()), index=0, key="_active_model")
+        active_model_id = AVAILABLE_MODELS[active_model_label]
     st.markdown("via [Groq API](https://groq.com)")
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
@@ -403,7 +405,7 @@ with tab_ask:
             """Generator for st.write_stream(): yields text tokens from SSE stream."""
             with requests.post(
                 f"{api_url}/query/stream",
-                json={"question": q, "top_k": k},
+                json={"question": q, "top_k": k, "model_id": active_model_id},
                 stream=True,
                 timeout=90,
             ) as resp:
