@@ -16,6 +16,7 @@ MOCK_RUN_RESULT = {
     "question": "What happened in Hatay?",
     "answer": "Severe damage was reported across Hatay province.",
     "context": "[1] Situation Report 1 (2023-02-10)\nThe earthquake caused severe damage in Hatay.",
+    "model_id": "llama-3.1-8b-instant",
 }
 
 
@@ -87,12 +88,12 @@ def test_query_top_k_zero_is_rejected(client):
 
 def test_query_passes_top_k_to_chain(client, mock_chain):
     client.post("/query", json={"question": "test question", "top_k": 3})
-    mock_chain.run.assert_called_once_with("test question", top_k=3)
+    mock_chain.run.assert_called_once_with("test question", top_k=3, model_id=None)
 
 
 def test_query_default_top_k_is_5(client, mock_chain):
     client.post("/query", json={"question": "test question"})
-    mock_chain.run.assert_called_once_with("test question", top_k=5)
+    mock_chain.run.assert_called_once_with("test question", top_k=5, model_id=None)
 
 
 def test_query_latency_is_positive(client):
