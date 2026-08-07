@@ -32,24 +32,6 @@ AVAILABLE_MODELS = {
     "Llama 3.3 70B — quality": "llama-3.3-70b-versatile",
 }
 
-# (lat, lon) centroids matching the retriever's province_coords — swapped for Folium
-PROVINCE_CENTROIDS: dict[str, tuple[float, float]] = {
-    "Hatay":         (36.50, 36.20),
-    "Kahramanmaras": (37.58, 36.93),
-    "Gaziantep":     (37.07, 37.05),
-    "Adiyaman":      (37.76, 38.27),
-    "Malatya":       (38.35, 38.35),
-    "Osmaniye":      (37.07, 36.25),
-    "Adana":         (37.00, 35.33),
-    "Sanliurfa":     (37.16, 38.79),
-    "Diyarbakir":    (37.91, 40.23),
-    "Kilis":         (36.72, 37.12),
-    "Elazig":        (38.67, 39.22),
-    "Idlib":         (35.93, 36.63),
-    "Aleppo":        (36.20, 37.16),
-    "Hama":          (35.13, 36.75),
-}
-
 PROVINCE_QUESTIONS = {
     "Hatay": "What was the humanitarian situation in Hatay?",
     "Kahramanmaraş": "What damage was reported in Kahramanmaraş?",
@@ -160,12 +142,6 @@ EXAMPLE_QUESTIONS = [
 ]
 
 
-def _extract_provinces(spatial_text: str) -> list[str]:
-    """Return province names from PROVINCE_CENTROIDS that appear in the spatial block."""
-    lower = spatial_text.lower()
-    return [name for name in PROVINCE_CENTROIDS if name.lower() in lower]
-
-
 def _parse_context(context: str) -> tuple[list[dict], str]:
     """Split the retriever context string into chunk dicts + geospatial block."""
     parts = context.split("\n\nGeospatial context:")
@@ -207,7 +183,7 @@ def load_spatial() -> dict | None:
         return pickle.load(f)
 
 
-def _build_map(highlighted: list[str] | None = None) -> folium.Map:
+def _build_map() -> folium.Map:
     m = folium.Map(
         location=[37.0, 37.5],
         zoom_start=7,
@@ -257,22 +233,6 @@ def _build_map(highlighted: list[str] | None = None) -> folium.Map:
                 fill_opacity=0.7,
                 tooltip="Destroyed building (HOT OSM)",
             ).add_to(cluster)
-
-    if highlighted:
-        hl_group = folium.FeatureGroup(name="Mentioned provinces").add_to(m)
-        for province in highlighted:
-            coords = PROVINCE_CENTROIDS.get(province)
-            if coords:
-                folium.CircleMarker(
-                    location=coords,
-                    radius=20,
-                    color="#f97316",
-                    weight=3,
-                    fill=True,
-                    fill_color="#f97316",
-                    fill_opacity=0.25,
-                    tooltip=f"<b>{province}</b> — retrieved in context",
-                ).add_to(hl_group)
 
     folium.LayerControl().add_to(m)
     return m
@@ -507,11 +467,6 @@ with tab_ask:
                         fut_b = ex.submit(_query_model, model_b_label)
                         st.session_state._comparison = [fut_a.result(), fut_b.result()]
 
-                first_ctx = st.session_state._comparison[0]["context"]
-                if first_ctx:
-                    _, spatial_txt = _parse_context(first_ctx)
-                    st.session_state._highlighted_provinces = _extract_provinces(spatial_txt)
-
             else:
                 st.session_state._comparison = None
                 st.session_state._stream_context = ""
@@ -543,8 +498,6 @@ with tab_ask:
 
                 ctx = st.session_state.get("_stream_context", "")
                 if ctx:
-                    _, spatial_txt = _parse_context(ctx)
-                    st.session_state._highlighted_provinces = _extract_provinces(spatial_txt)
                     with st.expander("Retrieved context passages"):
                         chunks, spatial = _parse_context(ctx)
                         for chunk in chunks:
@@ -579,13 +532,9 @@ with tab_ask:
                 "Run `python -m ingestion.pipeline` first."
             )
         else:
-            highlighted = st.session_state.get("_highlighted_provinces", [])
-            map_key = "_map_html_" + "_".join(sorted(highlighted))
-            if map_key not in st.session_state:
-                for k in [k for k in st.session_state if k.startswith("_map_html_")]:
-                    del st.session_state[k]
-                st.session_state[map_key] = _build_map(highlighted)._repr_html_()
-            st_components.html(st.session_state[map_key], height=560)
+            if "_folium_map_html" not in st.session_state:
+                st.session_state._folium_map_html = _build_map()._repr_html_()
+            st_components.html(st.session_state._folium_map_html, height=560)
 
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
