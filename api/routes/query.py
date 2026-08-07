@@ -28,7 +28,7 @@ def query(request: Request, body: QueryRequest) -> QueryResponse:
     logger.info("Received query: %s", body.question)
 
     t0 = time.perf_counter()
-    result = chain.run(body.question, top_k=body.top_k)
+    result = chain.run(body.question, top_k=body.top_k, model_id=body.model_id)
     latency_ms = (time.perf_counter() - t0) * 1000
 
     logger.info("Query answered in %.0f ms", latency_ms)
@@ -39,6 +39,7 @@ def query(request: Request, body: QueryRequest) -> QueryResponse:
         top_k=body.top_k,
         latency_ms=round(latency_ms, 1),
         context_chars=len(result["context"]),
+        model_id=result["model_id"],
     )
 
     return QueryResponse(
@@ -55,7 +56,7 @@ def query_stream(request: Request, body: QueryRequest) -> StreamingResponse:
     logger.info("Streaming query: %s", body.question)
 
     def generate():
-        for event_type, data in chain.stream(body.question, top_k=body.top_k):
+        for event_type, data in chain.stream(body.question, top_k=body.top_k, model_id=body.model_id):
             yield f"data: {json.dumps({'type': event_type, 'value': data})}\n\n"
         yield "data: [DONE]\n\n"
 

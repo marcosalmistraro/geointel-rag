@@ -15,6 +15,7 @@ import json as _json
 import pickle
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import folium
@@ -25,6 +26,11 @@ from folium.plugins import MarkerCluster
 
 SPATIAL_PATH = Path("data/processed/spatial.pkl")
 DEFAULT_API_URL = "http://localhost:8000"
+
+AVAILABLE_MODELS = {
+    "Llama 3.1 8B — fast": "llama-3.1-8b-instant",
+    "Llama 3.3 70B — quality": "llama-3.3-70b-versatile",
+}
 
 PROVINCE_QUESTIONS = {
     "Hatay": "What was the humanitarian situation in Hatay?",
@@ -250,7 +256,14 @@ with st.sidebar:
     api_url = st.text_input("API URL", value=DEFAULT_API_URL)
     st.divider()
     st.markdown("**Model**")
-    st.markdown("`llama-3.1-8b-instant`")
+    compare_mode = st.toggle("Compare two models", value=False, key="_compare_mode")
+    if compare_mode:
+        model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
+        model_b_label = st.selectbox("Model B", list(AVAILABLE_MODELS.keys()), index=1, key="_model_b")
+    else:
+        model_a_label = None
+        model_b_label = None
+        st.markdown("`llama-3.1-8b-instant`")
     st.markdown("via [Groq API](https://groq.com)")
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
@@ -415,47 +428,86 @@ with tab_ask:
 
         if submit and question.strip():
             q = question.strip()
-            st.session_state._stream_context = ""
-            st.markdown("### Answer")
-            t0 = time.perf_counter()
-            try:
-                answer = st.write_stream(_stream_query(q, top_k))
-            except requests.exceptions.ConnectionError:
-                st.error(
-                    "Cannot reach the API. "
-                    "Make sure `uvicorn api.main:app --reload` is running."
-                )
-                answer = ""
-            except requests.exceptions.HTTPError as e:
-                st.error(f"API error {e.response.status_code}: {e.response.text[:300]}")
-                answer = ""
-            except Exception as e:
-                st.error(f"Unexpected error: {e}")
-                answer = ""
 
-            latency_ms = round((time.perf_counter() - t0) * 1000)
-            if answer:
-                st.caption(f"Latency: {latency_ms} ms")
-                st.session_state.history.append({
-                    "question": q,
-                    "answer": answer,
-                    "latency_ms": latency_ms,
-                })
+            if compare_mode:
+                def _query_model(model_label: str) -> dict:
+                    model_id = AVAILABLE_MODELS[model_label]
+                    t0 = time.perf_counter()
+                    try:
+                        resp = requests.post(
+                            f"{api_url}/query",
+                            json={"question": q, "top_k": top_k, "model_id": model_id},
+                            timeout=120,
+                        )
+                        resp.raise_for_status()
+                        data = resp.json()
+                        return {
+                            "label": model_label,
+                            "model_id": model_id,
+                            "answer": data["answer"],
+                            "context": data["context"],
+                            "latency_ms": round((time.perf_counter() - t0) * 1000),
+                            "error": None,
+                        }
+                    except Exception as exc:
+                        return {
+                            "label": model_label,
+                            "model_id": model_id,
+                            "answer": "",
+                            "context": "",
+                            "latency_ms": 0,
+                            "error": str(exc),
+                        }
 
-            ctx = st.session_state.get("_stream_context", "")
-            if ctx:
-                with st.expander("Retrieved context passages"):
-                    chunks, spatial = _parse_context(ctx)
-                    for chunk in chunks:
-                        with st.container(border=True):
-                            st.markdown(
-                                f"**[{chunk['index']}] {chunk['title']}**"
-                                + (f"  `{chunk['date']}`" if chunk["date"] else "")
-                            )
-                            st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
-                    if spatial:
-                        st.markdown("**Geospatial context**")
-                        st.info(spatial)
+                with st.spinner("Running both models in parallel…"):
+                    with ThreadPoolExecutor(max_workers=2) as ex:
+                        fut_a = ex.submit(_query_model, model_a_label)
+                        fut_b = ex.submit(_query_model, model_b_label)
+                        st.session_state._comparison = [fut_a.result(), fut_b.result()]
+
+            else:
+                st.session_state._comparison = None
+                st.session_state._stream_context = ""
+                st.markdown("### Answer")
+                t0 = time.perf_counter()
+                try:
+                    answer = st.write_stream(_stream_query(q, top_k))
+                except requests.exceptions.ConnectionError:
+                    st.error(
+                        "Cannot reach the API. "
+                        "Make sure `uvicorn api.main:app --reload` is running."
+                    )
+                    answer = ""
+                except requests.exceptions.HTTPError as e:
+                    st.error(f"API error {e.response.status_code}: {e.response.text[:300]}")
+                    answer = ""
+                except Exception as e:
+                    st.error(f"Unexpected error: {e}")
+                    answer = ""
+
+                latency_ms = round((time.perf_counter() - t0) * 1000)
+                if answer:
+                    st.caption(f"Latency: {latency_ms} ms")
+                    st.session_state.history.append({
+                        "question": q,
+                        "answer": answer,
+                        "latency_ms": latency_ms,
+                    })
+
+                ctx = st.session_state.get("_stream_context", "")
+                if ctx:
+                    with st.expander("Retrieved context passages"):
+                        chunks, spatial = _parse_context(ctx)
+                        for chunk in chunks:
+                            with st.container(border=True):
+                                st.markdown(
+                                    f"**[{chunk['index']}] {chunk['title']}**"
+                                    + (f"  `{chunk['date']}`" if chunk["date"] else "")
+                                )
+                                st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
+                        if spatial:
+                            st.markdown("**Geospatial context**")
+                            st.info(spatial)
 
         elif submit:
             st.warning("Please enter a question first.")
@@ -488,6 +540,31 @@ with tab_ask:
                 f"{n_contours} intensity contours · "
                 f"{n_buildings:,} destroyed buildings recorded"
             )
+
+    if compare_mode and st.session_state.get("_comparison"):
+        st.divider()
+        st.subheader("Model comparison")
+        results = st.session_state._comparison
+        col_a, col_b = st.columns(2, gap="large")
+        for col, r in zip([col_a, col_b], results):
+            with col:
+                st.markdown(f"**{r['label']}**")
+                st.caption(f"`{r['model_id']}`")
+                if r["error"]:
+                    st.error(r["error"])
+                else:
+                    st.markdown(r["answer"])
+                    st.caption(f"Latency: {r['latency_ms']} ms")
+                    if r["context"]:
+                        with st.expander("Context passages"):
+                            chunks, spatial_txt = _parse_context(r["context"])
+                            for chunk in chunks:
+                                with st.container(border=True):
+                                    st.markdown(
+                                        f"**[{chunk['index']}] {chunk['title']}**"
+                                        + (f"  `{chunk['date']}`" if chunk["date"] else "")
+                                    )
+                                    st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
 
 # ── Sources tab ───────────────────────────────────────────────────────────────
 

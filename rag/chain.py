@@ -64,13 +64,13 @@ class RAGChain:
             {"role": "user", "content": user_content},
         ]
 
-    def _call_llm(self, question: str, context: str) -> str:
+    def _call_llm(self, question: str, context: str, model_id: str | None = None) -> str:
         headers = {
             "Authorization": f"Bearer {self.groq_api_key}",
             "Content-Type": "application/json",
         }
         payload = {
-            "model": self.model_id,
+            "model": model_id or self.model_id,
             "messages": self._build_messages(question, context),
             "max_tokens": 512,
             "temperature": 0.2,
@@ -89,7 +89,7 @@ class RAGChain:
         result = response.json()
         return result["choices"][0]["message"]["content"].strip()
 
-    def stream(self, question: str, top_k: int | None = None):
+    def stream(self, question: str, top_k: int | None = None, model_id: str | None = None):
         """
         Generator that yields (event_type, data) tuples.
         First yields ("context", context_string), then ("token", token) per LLM token.
@@ -104,7 +104,7 @@ class RAGChain:
             "Content-Type": "application/json",
         }
         payload = {
-            "model": self.model_id,
+            "model": model_id or self.model_id,
             "messages": self._build_messages(question, context),
             "max_tokens": 512,
             "temperature": 0.2,
@@ -133,24 +133,27 @@ class RAGChain:
             logger.warning("LLM HTTP error: %s", exc)
             yield "token", f"[LLM error {resp.status_code}: {resp.text[:200]}]"
 
-    def run(self, question: str, top_k: int | None = None) -> dict:
+    def run(self, question: str, top_k: int | None = None, model_id: str | None = None) -> dict:
         """
         Run the full RAG chain.
         Returns a dict with the answer and the context used.
         top_k overrides the retriever default when provided.
+        model_id overrides self.model_id for this call only.
         """
+        effective_model = model_id or self.model_id
         logger.info("Query: %s", question)
 
         context = self.retriever.retrieve(question, top_k=top_k)
         logger.info("Retrieved context (%d chars)", len(context))
 
-        logger.info("Calling LLM (%s) ...", self.model_id)
-        answer = self._call_llm(question, context)
+        logger.info("Calling LLM (%s) ...", effective_model)
+        answer = self._call_llm(question, context, model_id=model_id)
 
         return {
             "question": question,
             "answer": answer,
             "context": context,
+            "model_id": effective_model,
         }
 
 

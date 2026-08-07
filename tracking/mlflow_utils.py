@@ -32,6 +32,7 @@ def log_query(
     top_k: int,
     latency_ms: float,
     context_chars: int,
+    model_id: str | None = None,
 ) -> None:
     """Log a single RAG query as one MLflow run."""
     try:
@@ -40,7 +41,7 @@ def log_query(
             mlflow.log_params({
                 "question": question[:500],   # MLflow caps param length at 500 chars
                 "top_k": top_k,
-                "model_id": settings.base_model_id,
+                "model_id": model_id or settings.base_model_id,
             })
             mlflow.log_metrics({
                 "latency_ms": latency_ms,
