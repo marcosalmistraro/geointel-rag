@@ -303,7 +303,7 @@ with st.sidebar:
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
 
-tab_ask, tab_eval, tab_sources = st.tabs(["Ask", "Evaluate", "Data Sources"])
+tab_ask, tab_eval, tab_sources, tab_arch = st.tabs(["Ask", "Evaluate", "Data Sources", "Architecture"])
 
 # ── Ask tab ───────────────────────────────────────────────────────────────────
 
@@ -681,3 +681,117 @@ with tab_eval:
                 st.markdown(f"**Q{i}. {r['question']}**")
                 st.markdown(r["answer"])
                 st.divider()
+
+# ── Architecture tab ──────────────────────────────────────────────────────────
+
+with tab_arch:
+    st.subheader("System Architecture")
+    st.caption(
+        "GeoIntel RAG is split into two phases: an offline ingestion pipeline that builds "
+        "the knowledge base, and an online query pipeline that answers questions in real time."
+    )
+
+    # ── Pipeline diagram ──────────────────────────────────────────────────────
+    st.graphviz_chart("""
+    digraph {
+        rankdir=LR
+        graph [fontname="Helvetica" bgcolor="transparent" pad="0.4" nodesep="0.5" ranksep="0.8"]
+        node  [fontname="Helvetica" fontsize=11 shape=box style="rounded,filled" margin="0.2,0.1"]
+        edge  [fontname="Helvetica" fontsize=10 color="#555555"]
+
+        subgraph cluster_offline {
+            label="Offline — ingestion"
+            style=dashed color="#aaaaaa" fontcolor="#555555" fontsize=12
+
+            rw      [label="ReliefWeb API\n(situation reports)"  fillcolor="#dbeafe" color="#93c5fd"]
+            ocha    [label="OCHA\n(key figures)"                 fillcolor="#dbeafe" color="#93c5fd"]
+            chunker [label="Chunker\n512 tokens · 64 overlap"    fillcolor="#fef9c3" color="#fcd34d"]
+            emb_off [label="Embedder\nall-MiniLM-L6-v2"          fillcolor="#fef9c3" color="#fcd34d"]
+            faiss   [label="FAISS\nvector index"                  fillcolor="#d1fae5" color="#6ee7b7"]
+            hfhub   [label="HuggingFace Hub\ndata storage"        fillcolor="#ede9fe" color="#c4b5fd"]
+
+            shk     [label="USGS ShakeMap\n(GeoJSON)"             fillcolor="#dbeafe" color="#93c5fd"]
+            osm     [label="HOT OSM\n(buildings)"                 fillcolor="#dbeafe" color="#93c5fd"]
+            spatial [label="Spatial processor\nGeoDataFrame"      fillcolor="#d1fae5" color="#6ee7b7"]
+
+            rw   -> chunker -> emb_off -> faiss -> hfhub
+            ocha -> chunker
+            shk  -> spatial -> hfhub
+            osm  -> spatial
+        }
+
+        subgraph cluster_online {
+            label="Online — query"
+            style=dashed color="#aaaaaa" fontcolor="#555555" fontsize=12
+
+            user    [label="User question"          fillcolor="#fee2e2" color="#fca5a5"]
+            emb_on  [label="Embedder\n(same model)" fillcolor="#fef9c3" color="#fcd34d"]
+            retr    [label="Retriever\ntop-k chunks" fillcolor="#d1fae5" color="#6ee7b7"]
+            enrich  [label="Spatial enrichment\n+ province info" fillcolor="#d1fae5" color="#6ee7b7"]
+            groq    [label="Groq API\nLlama 3.1 8B / 3.3 70B" fillcolor="#fed7aa" color="#fb923c"]
+            answer  [label="Streamed answer\n+ Folium map"       fillcolor="#fee2e2" color="#fca5a5"]
+
+            user -> emb_on -> retr -> enrich -> groq -> answer
+        }
+
+        hfhub -> retr [style=dashed label="downloaded\nat startup" fontcolor="#666666"]
+    }
+    """)
+
+    st.divider()
+
+    # ── Component cards ───────────────────────────────────────────────────────
+    st.markdown("### Components")
+
+    c1, c2, c3 = st.columns(3)
+
+    with c1:
+        with st.container(border=True):
+            st.markdown("**Data ingestion**")
+            st.caption(
+                "Raw documents are pulled from ReliefWeb (situation reports) and OCHA "
+                "(key figures) via their public APIs. Each document is split into "
+                "512-token chunks with 64-token overlap to preserve context at boundaries."
+            )
+        with st.container(border=True):
+            st.markdown("**Geospatial processing**")
+            st.caption(
+                "USGS ShakeMap GeoJSON contours and HOT OSM destroyed-building footprints "
+                "are loaded into GeoDataFrames. Province centroids are matched to ShakeMap "
+                "intensity zones, producing a spatial context string appended to each query."
+            )
+
+    with c2:
+        with st.container(border=True):
+            st.markdown("**Embedder & vector store**")
+            st.caption(
+                "Chunks are encoded with `all-MiniLM-L6-v2` (sentence-transformers) into "
+                "384-dimensional vectors and indexed in FAISS for fast cosine similarity search. "
+                "The index, chunks, and spatial data are stored on HuggingFace Hub and "
+                "downloaded to the server on first startup."
+            )
+        with st.container(border=True):
+            st.markdown("**Retriever**")
+            st.caption(
+                "At query time the user's question is embedded with the same model and the "
+                "top-k nearest chunks are retrieved from FAISS. Spatial enrichment is appended "
+                "— ShakeMap intensity and affected provinces for the query region."
+            )
+
+    with c3:
+        with st.container(border=True):
+            st.markdown("**LLM — Groq API**")
+            st.caption(
+                "Retrieved context is passed to Llama 3.1 8B Instant (fast) or "
+                "Llama 3.3 70B Versatile (quality) via the Groq inference API. "
+                "Answers stream token-by-token via server-sent events. "
+                "Compare mode runs both models in parallel using a thread pool."
+            )
+        with st.container(border=True):
+            st.markdown("**Deployment**")
+            st.caption(
+                "The app runs on Streamlit Cloud (free tier, ~1 GB RAM). "
+                "Code is hosted on GitHub and deployed automatically on every push to main. "
+                "Data files (~49 MB) live on HuggingFace Hub and are fetched at startup. "
+                "MLflow tracks every query: model, latency, and context length."
+            )
