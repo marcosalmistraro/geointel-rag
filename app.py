@@ -276,10 +276,11 @@ st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake 
 # ── sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.caption(
-        "**Single mode** — pick one model, answer streams in the Ask tab.  \n"
-        "**Compare mode** — pick two models, answers appear side by side."
-    )
+    st.markdown("**Single mode**")
+    st.caption("Pick one model. The answer streams in real time in the Ask tab.")
+    st.markdown("**Compare mode**")
+    st.caption("Pick two models. Both run in parallel and results appear side by side.")
+    st.divider()
     compare_mode = st.toggle("Compare two models", value=False, key="_compare_mode")
     if compare_mode:
         model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
@@ -529,23 +530,24 @@ with tab_ask:
         col_a, col_b = st.columns(2, gap="large")
         for col, r in zip([col_a, col_b], results):
             with col:
-                st.markdown(f"**{r['label']}**")
-                st.caption(f"`{r['model_id']}`")
-                if r["error"]:
-                    st.error(r["error"])
-                else:
-                    st.markdown(r["answer"])
-                    st.caption(f"Latency: {r['latency_ms']} ms")
-                    if r["context"]:
-                        with st.expander("Context passages"):
-                            chunks, _ = _parse_context(r["context"])
-                            for chunk in chunks:
-                                with st.container(border=True):
-                                    st.markdown(
-                                        f"**[{chunk['index']}] {chunk['title']}**"
-                                        + (f"  `{chunk['date']}`" if chunk["date"] else "")
-                                    )
-                                    st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
+                with st.container(border=True):
+                    st.markdown(f"**{r['label']}**")
+                    st.caption(f"`{r['model_id']}`")
+                    if r["error"]:
+                        st.error(r["error"])
+                    else:
+                        st.markdown(r["answer"])
+                        st.caption(f"Latency: {r['latency_ms']} ms")
+                        if r["context"]:
+                            with st.expander("Context passages"):
+                                chunks, _ = _parse_context(r["context"])
+                                for chunk in chunks:
+                                    with st.container(border=True):
+                                        st.markdown(
+                                            f"**[{chunk['index']}] {chunk['title']}**"
+                                            + (f"  `{chunk['date']}`" if chunk["date"] else "")
+                                        )
+                                        st.caption(chunk["text"][:300] + ("…" if len(chunk["text"]) > 300 else ""))
 
 # ── Sources tab ───────────────────────────────────────────────────────────────
 
