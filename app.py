@@ -276,21 +276,31 @@ st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake 
 # ── sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
+    is_compare = st.session_state.get("_compare_mode", False)
+
     st.markdown("**Single mode**")
     st.caption("Pick one model. The answer streams in real time in the Ask tab.")
+    active_model_label = st.selectbox(
+        "Model",
+        list(AVAILABLE_MODELS.keys()),
+        index=0,
+        key="_active_model",
+        disabled=is_compare,
+    )
+    active_model_id = AVAILABLE_MODELS[active_model_label] if not is_compare else None
+
+    st.divider()
+
     st.markdown("**Compare mode**")
     st.caption("Pick two models. Both run in parallel and results appear side by side.")
-    st.divider()
     compare_mode = st.toggle("Compare two models", value=False, key="_compare_mode")
     if compare_mode:
         model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
         model_b_label = st.selectbox("Model B", list(AVAILABLE_MODELS.keys()), index=1, key="_model_b")
-        active_model_id = None
     else:
         model_a_label = None
         model_b_label = None
-        active_model_label = st.selectbox("Model", list(AVAILABLE_MODELS.keys()), index=0, key="_active_model")
-        active_model_id = AVAILABLE_MODELS[active_model_label]
+
     st.markdown("via [Groq API](https://groq.com)")
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
