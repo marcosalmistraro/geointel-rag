@@ -1,5 +1,5 @@
 ---
-title: GeoIntel RAG API
+title: geo_intel_rag
 emoji: 🌍
 colorFrom: blue
 colorTo: green
