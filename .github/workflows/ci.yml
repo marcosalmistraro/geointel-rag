@@ -39,21 +39,3 @@ jobs:
       - name: Run tests
         run: python -m pytest tests/ -v --tb=short
 
-  # ── Job 2: deploy to HuggingFace Spaces ──────────────────────────────────
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
-
-    steps:
-      - name: Check out the code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Push to HuggingFace Space
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-        run: |
-          git remote add space https://marcosalmistraro:$HF_TOKEN@huggingface.co/spaces/marcosalmistraro/geo_intel_rag
-          git push space main --force
