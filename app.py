@@ -605,18 +605,19 @@ with tab_ask:
         else:
             if "_folium_map_html" not in st.session_state:
                 st.session_state._folium_map_html = _build_map([])._repr_html_()
-            st_components.html(st.session_state._folium_map_html, height=560)
+            st_components.html(st.session_state._folium_map_html, height=560, scrolling=False)
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
-            st.caption(f"{n_contours} intensity contours · {n_buildings:,} destroyed buildings recorded")
-
             highlighted = st.session_state.get("_highlighted_provinces", [])
-            if highlighted:
-                names = ", ".join(n for n, _ in highlighted)
-                st.caption(f"Highlighted: **{names}**")
+            highlight_line = (
+                f" · Highlighted: **{', '.join(n for n, _ in highlighted)}**"
+                if highlighted else ""
+            )
             st.caption(
-                "After each query, provinces mentioned in the retrieved reports are marked "
-                "with an orange circle. Use **Clear highlights** to reset the map."
+                f"{n_contours} intensity contours · {n_buildings:,} destroyed buildings"
+                f"{highlight_line}  \n"
+                "After each query, provinces mentioned in retrieved reports are marked with "
+                "an orange circle. Use **Clear highlights** to reset."
             )
 
     if compare_mode and st.session_state.get("_comparison"):
