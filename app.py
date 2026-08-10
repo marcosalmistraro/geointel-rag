@@ -165,6 +165,42 @@ EXAMPLE_QUESTIONS = [
     "How did the earthquake affect Syrian refugees?",
 ]
 
+# canonical name → (lat, lon); keys are all lowercase for matching
+_PROVINCE_LOOKUP: dict[str, tuple[str, tuple[float, float]]] = {
+    "hatay":          ("Hatay",          (36.40, 36.16)),
+    "kahramanmaraş":  ("Kahramanmaraş",  (37.58, 36.94)),
+    "kahramanmaras":  ("Kahramanmaraş",  (37.58, 36.94)),
+    "gaziantep":      ("Gaziantep",      (37.07, 37.38)),
+    "adıyaman":       ("Adıyaman",       (37.76, 38.28)),
+    "adiyaman":       ("Adıyaman",       (37.76, 38.28)),
+    "malatya":        ("Malatya",        (38.35, 38.31)),
+    "osmaniye":       ("Osmaniye",       (37.07, 36.25)),
+    "kilis":          ("Kilis",          (36.72, 37.12)),
+    "diyarbakır":     ("Diyarbakır",     (37.91, 40.22)),
+    "diyarbakir":     ("Diyarbakır",     (37.91, 40.22)),
+    "şanlıurfa":      ("Şanlıurfa",      (37.16, 38.80)),
+    "sanliurfa":      ("Şanlıurfa",      (37.16, 38.80)),
+    "elbistan":       ("Elbistan",       (38.21, 37.19)),
+    "pazarcık":       ("Pazarcık",       (37.49, 37.31)),
+    "pazarcik":       ("Pazarcık",       (37.49, 37.31)),
+    "idlib":          ("Idlib",          (35.93, 36.63)),
+    "aleppo":         ("Aleppo",         (36.20, 37.16)),
+    "elazığ":         ("Elazığ",         (38.68, 39.22)),
+    "elazig":         ("Elazığ",         (38.68, 39.22)),
+}
+
+
+def _extract_provinces(context: str) -> list[tuple[str, tuple[float, float]]]:
+    """Return (canonical_name, (lat, lon)) for every province found in context."""
+    ctx_lower = context.lower()
+    seen: set[str] = set()
+    found = []
+    for key, (name, coords) in _PROVINCE_LOOKUP.items():
+        if key in ctx_lower and name not in seen:
+            seen.add(name)
+            found.append((name, coords))
+    return found
+
 
 # ── chain (loaded once, shared across all reruns) ─────────────────────────────
 
@@ -175,6 +211,11 @@ def _load_chain() -> RAGChain:
 
 
 chain = _load_chain()
+
+
+def _clear_map_highlights() -> None:
+    st.session_state._highlighted_provinces = []
+    st.session_state._folium_map_html = _build_map([])._repr_html_()
 
 
 # ── helpers ───────────────────────────────────────────────────────────────────
@@ -216,7 +257,7 @@ def load_spatial() -> dict | None:
         return pickle.load(f)
 
 
-def _build_map() -> folium.Map:
+def _build_map(highlighted: list[tuple[str, tuple[float, float]]] | None = None) -> folium.Map:
     m = folium.Map(location=[37.0, 37.5], zoom_start=7, tiles=None, width="100%", height=540)
     folium.TileLayer(
         tiles="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -260,6 +301,24 @@ def _build_map() -> folium.Map:
                 fill_opacity=0.7,
                 tooltip="Destroyed building (HOT OSM)",
             ).add_to(cluster)
+
+    if highlighted:
+        for name, (lat, lon) in highlighted:
+            folium.Circle(
+                location=[lat, lon],
+                radius=25000,
+                color="#f97316",
+                fill=True,
+                fill_color="#f97316",
+                fill_opacity=0.18,
+                weight=2.5,
+                tooltip=f"{name} — mentioned in retrieved reports",
+            ).add_to(m)
+            folium.Marker(
+                location=[lat, lon],
+                tooltip=name,
+                icon=folium.Icon(color="orange", icon="map-marker"),
+            ).add_to(m)
 
     folium.LayerControl().add_to(m)
     return m
@@ -472,6 +531,13 @@ with tab_ask:
                         fut_b = ex.submit(_query_model, model_b_label)
                         st.session_state._comparison = [fut_a.result(), fut_b.result()]
 
+                ctx_a = st.session_state._comparison[0].get("context", "")
+                if ctx_a:
+                    provinces = _extract_provinces(ctx_a)
+                    if provinces:
+                        st.session_state._highlighted_provinces = provinces
+                        st.session_state._folium_map_html = _build_map(provinces)._repr_html_()
+
             else:
                 st.session_state._comparison = None
                 st.session_state._stream_context = ""
@@ -494,6 +560,11 @@ with tab_ask:
 
                 ctx = st.session_state.get("_stream_context", "")
                 if ctx:
+                    provinces = _extract_provinces(ctx)
+                    if provinces:
+                        st.session_state._highlighted_provinces = provinces
+                        st.session_state._folium_map_html = _build_map(provinces)._repr_html_()
+
                     with st.expander("Retrieved context passages"):
                         chunks, spatial_txt = _parse_context(ctx)
                         for chunk in chunks:
@@ -519,17 +590,34 @@ with tab_ask:
                     st.caption(f"Latency: {item['latency_ms']} ms")
 
     with col_map:
-        st.subheader("Affected area — ShakeMap + destroyed buildings")
+        map_hdr, map_btn = st.columns([4, 1])
+        map_hdr.subheader("Affected area — ShakeMap + destroyed buildings")
+        if st.session_state.get("_highlighted_provinces"):
+            map_btn.button(
+                "Clear highlights",
+                on_click=_clear_map_highlights,
+                use_container_width=True,
+            )
+
         spatial = load_spatial()
         if spatial is None:
             st.info("Map data is downloading — it will appear after the first query.")
         else:
             if "_folium_map_html" not in st.session_state:
-                st.session_state._folium_map_html = _build_map()._repr_html_()
+                st.session_state._folium_map_html = _build_map([])._repr_html_()
             st_components.html(st.session_state._folium_map_html, height=560)
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
             st.caption(f"{n_contours} intensity contours · {n_buildings:,} destroyed buildings recorded")
+
+            highlighted = st.session_state.get("_highlighted_provinces", [])
+            if highlighted:
+                names = ", ".join(n for n, _ in highlighted)
+                st.caption(f"Highlighted: **{names}**")
+            st.caption(
+                "After each query, provinces mentioned in the retrieved reports are marked "
+                "with an orange circle. Use **Clear highlights** to reset the map."
+            )
 
     if compare_mode and st.session_state.get("_comparison"):
         st.divider()
