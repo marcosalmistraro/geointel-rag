@@ -157,8 +157,6 @@ EVAL_TEST_CASES = [
      "keywords": ["health", "medical", "hospital", "injuries"]},
 ]
 
-EVAL_PASS_THRESHOLD = 0.5
-
 EXAMPLE_QUESTIONS = [
     "What was the humanitarian situation in Hatay?",
     "How many people were displaced across the affected provinces?",
@@ -589,9 +587,10 @@ with tab_eval:
 
     st.subheader("RAG Evaluation")
     st.caption(
-        "Runs 10 test questions through the RAG chain and measures **keyword recall** — "
-        "how many expected keywords appear in the answer. "
-        f"Pass threshold: ≥ {EVAL_PASS_THRESHOLD:.0%}."
+        "Runs 10 test questions and measures three complementary metrics:  \n"
+        "**Answer recall** — keywords found in the answer (did the LLM say the right things?).  \n"
+        "**Context recall** — keywords found in the retrieved passages (did retrieval find the right chunks?).  \n"
+        "**Answer length** — word count, a proxy for response depth."
     )
 
     eval_model_label = st.selectbox(
@@ -615,17 +614,24 @@ with tab_eval:
             try:
                 result = chain.run(case["question"], top_k=5, model_id=model_id)
                 answer = result["answer"]
+                context = result["context"]
             except Exception as exc:
                 answer = f"[Error: {exc}]"
+                context = ""
             latency_ms = round((time.perf_counter() - t0) * 1000)
+
             answer_lower = answer.lower()
-            found = [kw for kw in case["keywords"] if kw in answer_lower]
-            recall = len(found) / len(case["keywords"])
+            context_lower = context.lower()
+            found_in_answer = [kw for kw in case["keywords"] if kw in answer_lower]
+            found_in_context = [kw for kw in case["keywords"] if kw in context_lower]
+
             eval_results.append({
                 "question": case["question"],
-                "recall": round(recall, 3),
-                "passed": recall >= EVAL_PASS_THRESHOLD,
-                "found_keywords": ", ".join(found),
+                "answer_recall": round(len(found_in_answer) / len(case["keywords"]), 3),
+                "context_recall": round(len(found_in_context) / len(case["keywords"]), 3),
+                "answer_length": len(answer.split()),
+                "keywords_in_answer": ", ".join(found_in_answer),
+                "keywords_in_context": ", ".join(found_in_context),
                 "latency_ms": latency_ms,
                 "answer": answer,
             })
@@ -636,30 +642,40 @@ with tab_eval:
 
     if st.session_state.get("_eval_results"):
         results = st.session_state._eval_results
-        mean_recall = sum(r["recall"] for r in results) / len(results)
-        n_passed = sum(r["passed"] for r in results)
+
+        mean_answer_recall = sum(r["answer_recall"] for r in results) / len(results)
+        mean_context_recall = sum(r["context_recall"] for r in results) / len(results)
+        mean_length = sum(r["answer_length"] for r in results) / len(results)
         mean_latency = sum(r["latency_ms"] for r in results) / len(results)
 
         st.divider()
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Mean recall", f"{mean_recall:.0%}")
-        m2.metric("Passed", f"{n_passed}/{len(results)}")
-        m3.metric("Mean latency", f"{mean_latency:.0f} ms")
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Answer recall", f"{mean_answer_recall:.0%}")
+        m2.metric("Context recall", f"{mean_context_recall:.0%}")
+        m3.metric("Avg answer length", f"{mean_length:.0f} words")
+        m4.metric("Mean latency", f"{mean_latency:.0f} ms")
 
         df = pd.DataFrame(results)
         df.index = [f"Q{i+1}" for i in range(len(df))]
-        st.bar_chart(df["recall"], height=220)
+
+        st.bar_chart(df[["answer_recall", "context_recall"]], height=220)
+
         st.dataframe(
-            df[["question", "recall", "passed", "found_keywords", "latency_ms"]].rename(columns={
+            df[[
+                "question", "answer_recall", "context_recall",
+                "answer_length", "keywords_in_answer", "latency_ms",
+            ]].rename(columns={
                 "question": "Question",
-                "recall": "Recall",
-                "passed": "Passed",
-                "found_keywords": "Keywords found",
+                "answer_recall": "Answer recall",
+                "context_recall": "Context recall",
+                "answer_length": "Length (words)",
+                "keywords_in_answer": "Keywords in answer",
                 "latency_ms": "Latency (ms)",
             }),
             use_container_width=True,
             hide_index=False,
         )
+
         with st.expander("Full answers"):
             for i, r in enumerate(results, 1):
                 st.markdown(f"**Q{i}. {r['question']}**")
