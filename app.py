@@ -524,12 +524,12 @@ with tab_ask:
         if spatial is None:
             st.info("Map data is downloading — it will appear after the first query.")
         else:
-            if "_folium_map_html" not in st.session_state:
-                st.session_state._folium_map_html = _build_map()._repr_html_()
-            st_components.html(st.session_state._folium_map_html, height=560, scrolling=False)
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
             st.caption(f"{n_contours} intensity contours · {n_buildings:,} destroyed buildings recorded")
+            if "_folium_map_html" not in st.session_state:
+                st.session_state._folium_map_html = _build_map()._repr_html_()
+            st_components.html(st.session_state._folium_map_html, height=560, scrolling=False)
 
     if compare_mode and st.session_state.get("_comparison"):
         st.divider()
