@@ -12,6 +12,7 @@ Start with (keep the FastAPI server running in a separate terminal):
 from __future__ import annotations
 
 import json as _json
+import os
 import pickle
 import re
 import time
@@ -25,7 +26,7 @@ import streamlit.components.v1 as st_components
 from folium.plugins import MarkerCluster
 
 SPATIAL_PATH = Path("data/processed/spatial.pkl")
-DEFAULT_API_URL = "http://localhost:8000"
+DEFAULT_API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 AVAILABLE_MODELS = {
     "Llama 3.1 8B — fast": "llama-3.1-8b-instant",

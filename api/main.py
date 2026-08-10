@@ -17,6 +17,7 @@ from fastapi import FastAPI
 
 from api.routes import health, ingest, query
 from rag.chain import RAGChain
+from scripts.download_from_hub import download_if_missing
 
 logging.basicConfig(
     level=logging.INFO,
@@ -32,6 +33,8 @@ async def lifespan(app: FastAPI):
     We load the RAGChain here so the FAISS index and embedding model are
     in memory for the lifetime of the server — not reloaded per request.
     """
+    logger.info("Checking data files...")
+    download_if_missing()
     logger.info("Loading RAG chain...")
     app.state.chain = RAGChain()
     logger.info("RAG chain ready")
