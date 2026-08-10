@@ -56,7 +56,26 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: false          # builds locally to verify — add push: true + registry login to deploy
+          push: false
           tags: geointel-rag:latest
-          cache-from: type=gha  # reuse GitHub's build cache between runs
+          cache-from: type=gha
           cache-to: type=gha,mode=max
+
+  # ── Job 3: deploy to HuggingFace Spaces ───────────────────────────────────
+  deploy:
+    runs-on: ubuntu-latest
+    needs: docker
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Push to HuggingFace Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          git remote add space https://marcosalmistraro:$HF_TOKEN@huggingface.co/spaces/marcosalmistraro/geointel-rag-api
+          git push space main --force

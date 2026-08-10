@@ -1,6 +1,6 @@
 """
 Download processed data from HuggingFace Hub if not already on disk.
-Called during Render build; can also be run locally.
+Called during HuggingFace Spaces startup; can also be run locally.
 
     python scripts/download_from_hub.py
 """

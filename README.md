@@ -1,3 +1,13 @@
+---
+title: GeoIntel RAG API
+emoji: 🌍
+colorFrom: blue
+colorTo: green
+sdk: docker
+app_port: 8000
+pinned: false
+---
+
 # GeoIntel RAG
 
 Natural-language intelligence over the 2023 Turkey-Syria earthquake humanitarian response corpus, combining Retrieval-Augmented Generation (RAG) with geospatial map visualisation.
