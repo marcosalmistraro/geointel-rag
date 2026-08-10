@@ -303,7 +303,7 @@ with st.sidebar:
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
 
-tab_ask, tab_sources, tab_eval = st.tabs(["Ask", "Evaluate", "Data Sources"])
+tab_ask, tab_eval, tab_sources = st.tabs(["Ask", "Evaluate", "Data Sources"])
 
 # ── Ask tab ───────────────────────────────────────────────────────────────────
 
