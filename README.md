@@ -3,8 +3,8 @@ title: geo_intel_rag
 emoji: 🌍
 colorFrom: blue
 colorTo: green
-sdk: docker
-app_port: 8000
+sdk: streamlit
+app_file: app.py
 pinned: false
 ---
 
