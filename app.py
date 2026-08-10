@@ -276,8 +276,10 @@ st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake 
 # ── sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.header("Configuration")
-    st.markdown("**Model**")
+    st.caption(
+        "**Single mode** — pick one model, answer streams in the Ask tab.  \n"
+        "**Compare mode** — pick two models, answers appear side by side."
+    )
     compare_mode = st.toggle("Compare two models", value=False, key="_compare_mode")
     if compare_mode:
         model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
@@ -292,7 +294,7 @@ with st.sidebar:
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
 
-tab_ask, tab_sources, tab_eval = st.tabs(["Ask", "Sources", "Eval"])
+tab_ask, tab_sources, tab_eval = st.tabs(["Ask", "Evaluate", "Data Sources"])
 
 # ── Ask tab ───────────────────────────────────────────────────────────────────
 
