@@ -782,9 +782,7 @@ with tab_arch:
         ),
     ]
 
-    _, col, _ = st.columns([1, 3, 1])
-    with col:
-        for title, body in CARDS:
-            with st.container(border=True):
-                st.markdown(f"**{title}**")
-                st.caption(body)
+    for title, body in CARDS:
+        with st.container(border=True):
+            st.markdown(f"**{title}**")
+            st.caption(body)
