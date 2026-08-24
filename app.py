@@ -326,35 +326,35 @@ with tab_ask:
 
         def _apply_example():
             val = st.session_state._example_select
-            if val != "— pick an example question —":
+            if val is not None:
                 st.session_state.question = val
                 st.session_state._input_mode = "example"
-                st.session_state._province_select = "— or focus on a province —"
+                st.session_state._province_select = None
 
         def _apply_province():
             val = st.session_state._province_select
             if val in PROVINCE_QUESTIONS:
                 st.session_state.question = PROVINCE_QUESTIONS[val]
                 st.session_state._input_mode = "province"
-                st.session_state._example_select = "— pick an example question —"
+                st.session_state._example_select = None
 
         def _on_question_change():
             if st.session_state.question.strip():
                 st.session_state._input_mode = "manual"
-                st.session_state._example_select = "— pick an example question —"
-                st.session_state._province_select = "— or focus on a province —"
+                st.session_state._example_select = None
+                st.session_state._province_select = None
             else:
                 st.session_state._input_mode = None
 
         def _clear_example():
             st.session_state._input_mode = None
             st.session_state.question = ""
-            st.session_state._example_select = "— pick an example question —"
+            st.session_state._example_select = None
 
         def _clear_province():
             st.session_state._input_mode = None
             st.session_state.question = ""
-            st.session_state._province_select = "— or focus on a province —"
+            st.session_state._province_select = None
 
         def _clear_manual():
             st.session_state._input_mode = None
@@ -366,7 +366,9 @@ with tab_ask:
         with col_ex:
             st.selectbox(
                 "❓ Ready-made questions",
-                ["— pick an example question —"] + EXAMPLE_QUESTIONS,
+                EXAMPLE_QUESTIONS,
+                index=None,
+                placeholder="Choose an option",
                 key="_example_select",
                 on_change=_apply_example,
                 disabled=(mode in ("province", "manual")),
@@ -380,7 +382,9 @@ with tab_ask:
         with col_prov:
             st.selectbox(
                 "📍 Focus on a province",
-                ["— or focus on a province —"] + list(PROVINCE_QUESTIONS.keys()),
+                list(PROVINCE_QUESTIONS.keys()),
+                index=None,
+                placeholder="Choose an option",
                 key="_province_select",
                 on_change=_apply_province,
                 disabled=(mode in ("example", "manual")),
