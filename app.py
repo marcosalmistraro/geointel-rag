@@ -268,7 +268,7 @@ def _build_map() -> folium.Map:
 # ── page config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="GeoIntel RAG", page_icon="🌍", layout="wide")
-st.title("GeoIntel RAG")
+st.title("🌍 GeoIntel RAG")
 st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake response corpus.")
 
 # ── sidebar ───────────────────────────────────────────────────────────────────
