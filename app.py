@@ -491,15 +491,15 @@ with tab_ask:
 
         if len(st.session_state.history) > 1:
             st.divider()
-            col_hist_hdr, col_hist_clr = st.columns([4, 1])
-            col_hist_hdr.markdown("#### Session history")
-            if col_hist_clr.button("🗑️ Clear", use_container_width=True, help="Delete chat history"):
-                st.session_state.history = []
-                st.rerun()
-            for item in reversed(st.session_state.history[:-1]):
+            st.markdown("#### Session history")
+            for idx, item in enumerate(reversed(st.session_state.history[:-1])):
+                real_idx = len(st.session_state.history) - 2 - idx
                 with st.expander(item["question"][:80]):
                     st.markdown(item["answer"])
                     st.caption(f"Latency: {item['latency_ms']} ms")
+                    if st.button("🗑️ Delete", key=f"_del_hist_{real_idx}", help="Remove this entry"):
+                        st.session_state.history.pop(real_idx)
+                        st.rerun()
 
     with col_map:
         st.subheader("Affected area - ShakeMap + destroyed buildings")
