@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     # Model
     hf_token: str = Field(default="")
     groq_api_key: str = Field(default="")
-    base_model_id: str = Field(default="llama-3.1-8b-instant")
+    base_model_id: str = Field(default="openai/gpt-oss-20b")
     embed_model_id: str = Field(default="sentence-transformers/all-MiniLM-L6-v2")
 
     # Paths

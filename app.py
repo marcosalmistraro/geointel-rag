@@ -30,8 +30,8 @@ from rag.chain import RAGChain
 SPATIAL_PATH = Path("data/processed/spatial.pkl")
 
 AVAILABLE_MODELS = {
-    "Llama 3.1 8B - fast": "llama-3.1-8b-instant",
-    "Llama 3.3 70B - quality": "llama-3.3-70b-versatile",
+    "GPT-OSS 20B - fast": "openai/gpt-oss-20b",
+    "GPT-OSS 120B - quality": "openai/gpt-oss-120b",
 }
 
 PROVINCE_QUESTIONS = {
@@ -707,7 +707,7 @@ with tab_arch:
             emb_on  [label="Embedder\n(same model)"         fillcolor="#fef9c3" color="#fcd34d"]
             retr    [label="Retriever\ntop-k chunks"         fillcolor="#d1fae5" color="#6ee7b7"]
             enrich  [label="Spatial enrichment\n+ province info" fillcolor="#d1fae5" color="#6ee7b7"]
-            groq    [label="Groq API\nLlama 3.1 8B / 3.3 70B"   fillcolor="#fed7aa" color="#fb923c"]
+            groq    [label="Groq API\nGPT-OSS 20B / 120B"         fillcolor="#fed7aa" color="#fb923c"]
             answer  [label="Streamed answer\n+ Folium map"       fillcolor="#fee2e2" color="#fca5a5"]
 
             user -> emb_on -> retr -> enrich -> groq -> answer
@@ -749,8 +749,8 @@ with tab_arch:
         ),
         (
             "LLM - Groq API",
-            "Retrieved context is passed to Llama 3.1 8B Instant (fast) or Llama 3.3 70B Versatile "
-            "(quality) via Groq. Answers stream token-by-token. Compare mode runs both models in "
+            "Retrieved context is passed to GPT-OSS 20B (fast) or GPT-OSS 120B (quality) "
+            "via Groq. Answers stream token-by-token. Compare mode runs both models in "
             "parallel using a thread pool.",
         ),
         (

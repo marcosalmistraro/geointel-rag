@@ -30,7 +30,7 @@ from rag.retriever import Retriever
 logger = logging.getLogger(__name__)
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
-MODEL_ID = "llama-3.1-8b-instant"
+MODEL_ID = "openai/gpt-oss-20b"
 
 SYSTEM_PROMPT = (
     "You are a humanitarian intelligence assistant specialising in "
