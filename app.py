@@ -490,7 +490,7 @@ with tab_ask:
                 mime="text/csv",
                 use_container_width=True,
             )
-            if col_hist_clear.button("🗑️ Clear all", use_container_width=True, help="Delete all history"):
+            if col_hist_clear.button("Clear all", use_container_width=True, help="Delete all history"):
                 st.session_state.history = []
                 st.rerun()
             for idx, item in enumerate(reversed(st.session_state.history[:-1])):
