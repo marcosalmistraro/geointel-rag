@@ -573,7 +573,6 @@ with tab_eval:
     import pandas as pd
 
     st.subheader("RAG Evaluation")
-    st.divider()
 
     eval_model_label = st.selectbox(
         "Model to evaluate",
@@ -631,6 +630,11 @@ with tab_eval:
         mean_latency = sum(r["latency_ms"] for r in results) / len(results)
 
         st.divider()
+        st.caption(
+            "**Answer recall** - Keywords found in the answer. (Did the LLM say the right things?)  \n"
+            "**Context recall** - Keywords found in the retrieved passages. (Did retrieval find the right chunks?)  \n"
+            "**Answer length** - Word count, a proxy for response depth."
+        )
         m1, m2, m3, m4 = st.columns(4)
         m1.metric("Answer recall", f"{mean_answer_recall:.0%}")
         m2.metric("Context recall", f"{mean_context_recall:.0%}")
@@ -639,12 +643,6 @@ with tab_eval:
 
         df = pd.DataFrame(results)
         df.index = [f"Q{i+1}" for i in range(len(df))]
-
-        st.caption(
-            "**Answer recall** - Keywords found in the answer. (Did the LLM say the right things?)  \n"
-            "**Context recall** - Keywords found in the retrieved passages. (Did retrieval find the right chunks?)  \n"
-            "**Answer length** - Word count, a proxy for response depth."
-        )
 
         st.bar_chart(df[["answer_recall", "context_recall"]], height=220)
 
