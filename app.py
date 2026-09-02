@@ -395,7 +395,7 @@ with tab_ask:
         if "history" not in st.session_state:
             st.session_state.history = []
 
-        col_ask, col_export, col_clear = st.columns([3, 1, 1])
+        col_ask, col_export = st.columns([3, 1])
         submit = col_ask.button("Ask", type="primary", use_container_width=True)
 
         if st.session_state.history:
@@ -410,9 +410,6 @@ with tab_ask:
                 mime="text/csv",
                 use_container_width=True,
             )
-            if col_clear.button("🗑️ Clear", use_container_width=True, help="Delete chat history"):
-                st.session_state.history = []
-                st.rerun()
 
         def _stream_tokens(q: str, k: int):
             for event_type, data in chain.stream(q, top_k=k, model_id=active_model_id):
@@ -494,7 +491,11 @@ with tab_ask:
 
         if len(st.session_state.history) > 1:
             st.divider()
-            st.markdown("#### Session history")
+            col_hist_hdr, col_hist_clr = st.columns([4, 1])
+            col_hist_hdr.markdown("#### Session history")
+            if col_hist_clr.button("🗑️ Clear", use_container_width=True, help="Delete chat history"):
+                st.session_state.history = []
+                st.rerun()
             for item in reversed(st.session_state.history[:-1]):
                 with st.expander(item["question"][:80]):
                     st.markdown(item["answer"])
