@@ -493,11 +493,11 @@ with tab_ask:
             for idx, item in enumerate(reversed(st.session_state.history[:-1])):
                 real_idx = len(st.session_state.history) - 2 - idx
                 with st.expander(item["question"][:80]):
-                    st.markdown(item["answer"])
-                    st.caption(f"Latency: {item['latency_ms']} ms")
                     if st.button("🗑️ Delete", key=f"_del_hist_{real_idx}", help="Remove this entry"):
                         st.session_state.history.pop(real_idx)
                         st.rerun()
+                    st.markdown(item["answer"])
+                    st.caption(f"Latency: {item['latency_ms']} ms")
 
     with col_map:
         st.subheader("Affected area - ShakeMap + destroyed buildings")
