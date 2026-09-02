@@ -573,12 +573,7 @@ with tab_eval:
     import pandas as pd
 
     st.subheader("RAG Evaluation")
-    st.caption(
-        "Runs 10 test questions and measures three complementary metrics:  \n"
-        "**Answer recall** - keywords found in the answer (did the LLM say the right things?).  \n"
-        "**Context recall** - keywords found in the retrieved passages (did retrieval find the right chunks?).  \n"
-        "**Answer length** - word count, a proxy for response depth."
-    )
+    st.divider()
 
     eval_model_label = st.selectbox(
         "Model to evaluate",
@@ -645,8 +640,15 @@ with tab_eval:
         df = pd.DataFrame(results)
         df.index = [f"Q{i+1}" for i in range(len(df))]
 
+        st.caption(
+            "**Answer recall** - Keywords found in the answer. (Did the LLM say the right things?)  \n"
+            "**Context recall** - Keywords found in the retrieved passages. (Did retrieval find the right chunks?)  \n"
+            "**Answer length** - Word count, a proxy for response depth."
+        )
+
         st.bar_chart(df[["answer_recall", "context_recall"]], height=220)
 
+        st.divider()
         st.dataframe(
             df[[
                 "question", "answer_recall", "context_recall",
