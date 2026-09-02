@@ -673,7 +673,7 @@ with tab_eval:
 
 with tab_arch:
     st.subheader("System Architecture")
-    st.caption(
+    st.markdown(
         "GeoIntel RAG is split into two phases: an offline ingestion pipeline that builds "
         "the knowledge base, and an online query pipeline that answers questions in real time."
     )
