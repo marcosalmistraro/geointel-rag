@@ -495,9 +495,9 @@ with tab_ask:
                 st.rerun()
             for idx, item in enumerate(reversed(st.session_state.history[:-1])):
                 real_idx = len(st.session_state.history) - 2 - idx
-                col_q, col_del = st.columns([10, 1])
+                col_q, col_del = st.columns([8, 1])
                 with col_del:
-                    if st.button("🗑️", key=f"_del_hist_{real_idx}", help="Remove this entry"):
+                    if st.button("🗑️", key=f"_del_hist_{real_idx}", help="Remove this entry", use_container_width=True):
                         st.session_state.history.pop(real_idx)
                         st.rerun()
                 with col_q:
