@@ -492,7 +492,8 @@ with tab_ask:
             )
             for idx, item in enumerate(reversed(st.session_state.history[:-1])):
                 real_idx = len(st.session_state.history) - 2 - idx
-                with st.expander(item["question"][:80]):
+                q_num = real_idx + 1
+                with st.expander(f"Q{q_num}  ·  {item['question'][:70]}"):
                     if st.button("🗑️ Delete", key=f"_del_hist_{real_idx}", help="Remove this entry"):
                         st.session_state.history.pop(real_idx)
                         st.rerun()
