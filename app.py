@@ -395,21 +395,7 @@ with tab_ask:
         if "history" not in st.session_state:
             st.session_state.history = []
 
-        col_ask, col_export = st.columns([3, 1])
-        submit = col_ask.button("Ask", type="primary", use_container_width=True)
-
-        if st.session_state.history:
-            buf = io.StringIO()
-            writer = csv.DictWriter(buf, fieldnames=["question", "answer", "latency_ms"])
-            writer.writeheader()
-            writer.writerows(st.session_state.history)
-            col_export.download_button(
-                "Export CSV",
-                data=buf.getvalue(),
-                file_name="geointel_session.csv",
-                mime="text/csv",
-                use_container_width=True,
-            )
+        submit = st.button("Ask", type="primary", use_container_width=True)
 
         def _stream_tokens(q: str, k: int):
             for event_type, data in chain.stream(q, top_k=k, model_id=active_model_id):
@@ -491,7 +477,19 @@ with tab_ask:
 
         if len(st.session_state.history) > 1:
             st.divider()
-            st.markdown("#### Session history")
+            col_hist_hdr, col_hist_export = st.columns([3, 1])
+            col_hist_hdr.markdown("#### Session history")
+            buf = io.StringIO()
+            writer = csv.DictWriter(buf, fieldnames=["question", "answer", "latency_ms"])
+            writer.writeheader()
+            writer.writerows(st.session_state.history)
+            col_hist_export.download_button(
+                "Export CSV",
+                data=buf.getvalue(),
+                file_name="geointel_session.csv",
+                mime="text/csv",
+                use_container_width=True,
+            )
             for idx, item in enumerate(reversed(st.session_state.history[:-1])):
                 real_idx = len(st.session_state.history) - 2 - idx
                 with st.expander(item["question"][:80]):
