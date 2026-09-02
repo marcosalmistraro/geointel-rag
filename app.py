@@ -1,5 +1,5 @@
 """
-GeoIntel RAG — self-contained Streamlit app.
+GeoIntel RAG - self-contained Streamlit app.
 
 The RAGChain is loaded once at startup via @st.cache_resource.
 Data files are downloaded from HuggingFace Hub on first run.
@@ -30,8 +30,8 @@ from rag.chain import RAGChain
 SPATIAL_PATH = Path("data/processed/spatial.pkl")
 
 AVAILABLE_MODELS = {
-    "Llama 3.1 8B — fast": "llama-3.1-8b-instant",
-    "Llama 3.3 70B — quality": "llama-3.3-70b-versatile",
+    "Llama 3.1 8B - fast": "llama-3.1-8b-instant",
+    "Llama 3.3 70B - quality": "llama-3.3-70b-versatile",
 }
 
 PROVINCE_QUESTIONS = {
@@ -65,7 +65,7 @@ SOURCES = [
         "format": "JSON (API)",
     },
     {
-        "name": "USGS ShakeMap — M7.8 Pazarcik",
+        "name": "USGS ShakeMap - M7.8 Pazarcik",
         "homepage": "https://earthquake.usgs.gov/data/shakemap/",
         "dataset": "https://data.humdata.org/dataset/50d93259-2d49-4f84-85e6-3cd0aa03dfaa",
         "provider": "USGS / HDX",
@@ -83,7 +83,7 @@ SOURCES = [
         "format": "GeoJSON",
     },
     {
-        "name": "USGS ShakeMap — M7.5 Elbistan",
+        "name": "USGS ShakeMap - M7.5 Elbistan",
         "homepage": "https://earthquake.usgs.gov/data/shakemap/",
         "dataset": "https://data.humdata.org/dataset/50d93259-2d49-4f84-85e6-3cd0aa03dfaa",
         "provider": "USGS / HDX",
@@ -99,7 +99,7 @@ SOURCES = [
         "format": "GeoJSON",
     },
     {
-        "name": "HOT OSM — Destroyed Buildings",
+        "name": "HOT OSM - Destroyed Buildings",
         "homepage": "https://www.hotosm.org/",
         "dataset": "https://data.humdata.org/dataset/hotosm_tur_destroyed_buildings",
         "provider": "Humanitarian OpenStreetMap Team / HDX",
@@ -116,14 +116,14 @@ SOURCES = [
         "format": "GeoJSON (zipped)",
     },
     {
-        "name": "OCHA — Key Figures",
+        "name": "OCHA - Key Figures",
         "homepage": "https://www.unocha.org/",
         "dataset": "https://data.humdata.org/dataset/turkiye-syria-earthquake-key-figures",
         "provider": "UN OCHA / HDX",
         "description": (
             "OCHA's consolidated summary statistics for the earthquake response: "
             "casualties, displaced persons, affected population, shelter needs, "
-            "and response funding — updated regularly during the crisis."
+            "and response funding - updated regularly during the crisis."
         ),
         "used_for": (
             "Key figures are ingested as structured text and included in the "
@@ -168,7 +168,7 @@ EXAMPLE_QUESTIONS = [
 
 # ── chain (loaded once, shared across all reruns) ─────────────────────────────
 
-@st.cache_resource(show_spinner="Loading RAG chain — this takes about a minute on first run…")
+@st.cache_resource(show_spinner="Loading RAG chain - this takes about a minute on first run…")
 def _load_chain() -> RAGChain:
     download_if_missing()
     return RAGChain()
@@ -314,9 +314,9 @@ with tab_ask:
     with col_qa:
         st.subheader("Ask a question")
         st.caption(
-            "❓ **Ready-made** — pick from a list of pre-written questions.  \n"
-            "📍 **By province** — select a location to get a question about it.  \n"
-            "✏️ **Your own** — type whatever you want to ask.  \n"
+            "❓ **Ready-made** - pick from a list of pre-written questions.  \n"
+            "📍 **By province** - select a location to get a question about it.  \n"
+            "✏️ **Your own** - type whatever you want to ask.  \n"
             "Choosing one locks the other two. Use ✕ inside the selector to clear it."
         )
 
@@ -498,10 +498,10 @@ with tab_ask:
                     st.caption(f"Latency: {item['latency_ms']} ms")
 
     with col_map:
-        st.subheader("Affected area — ShakeMap + destroyed buildings")
+        st.subheader("Affected area - ShakeMap + destroyed buildings")
         spatial = load_spatial()
         if spatial is None:
-            st.info("Map data is downloading — it will appear after the first query.")
+            st.info("Map data is downloading - it will appear after the first query.")
         else:
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
@@ -567,9 +567,9 @@ with tab_eval:
     st.subheader("RAG Evaluation")
     st.caption(
         "Runs 10 test questions and measures three complementary metrics:  \n"
-        "**Answer recall** — keywords found in the answer (did the LLM say the right things?).  \n"
-        "**Context recall** — keywords found in the retrieved passages (did retrieval find the right chunks?).  \n"
-        "**Answer length** — word count, a proxy for response depth."
+        "**Answer recall** - keywords found in the answer (did the LLM say the right things?).  \n"
+        "**Context recall** - keywords found in the retrieved passages (did retrieval find the right chunks?).  \n"
+        "**Answer length** - word count, a proxy for response depth."
     )
 
     eval_model_label = st.selectbox(
@@ -679,7 +679,7 @@ with tab_arch:
         edge  [fontname="Helvetica" fontsize=12 color="#555555"]
 
         subgraph cluster_offline {
-            label="Offline — ingestion"
+            label="Offline - ingestion"
             style=dashed color="#aaaaaa" fontcolor="#444444" fontsize=15
 
             rw      [label="ReliefWeb API\n(situation reports)"  fillcolor="#dbeafe" color="#93c5fd"]
@@ -700,7 +700,7 @@ with tab_arch:
         }
 
         subgraph cluster_online {
-            label="Online — query"
+            label="Online - query"
             style=dashed color="#aaaaaa" fontcolor="#444444" fontsize=15
 
             user    [label="User question"                  fillcolor="#fee2e2" color="#fca5a5"]
@@ -744,11 +744,11 @@ with tab_arch:
         (
             "Retriever",
             "At query time the user's question is embedded with the same model and the top-k nearest "
-            "chunks are retrieved from FAISS. Spatial enrichment is appended — ShakeMap intensity "
+            "chunks are retrieved from FAISS. Spatial enrichment is appended - ShakeMap intensity "
             "and affected provinces for the query region.",
         ),
         (
-            "LLM — Groq API",
+            "LLM - Groq API",
             "Retrieved context is passed to Llama 3.1 8B Instant (fast) or Llama 3.3 70B Versatile "
             "(quality) via Groq. Answers stream token-by-token. Compare mode runs both models in "
             "parallel using a thread pool.",
