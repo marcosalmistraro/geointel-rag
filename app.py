@@ -49,7 +49,7 @@ SOURCES = [
     {
         "name": "ReliefWeb",
         "homepage": "https://reliefweb.int/",
-        "dataset": "https://api.reliefweb.int/v2/reports",
+        "dataset": "https://apidoc.reliefweb.int/",
         "provider": "UN OCHA",
         "description": (
             "ReliefWeb is the UN's humanitarian information portal, aggregating "
