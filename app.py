@@ -477,7 +477,7 @@ with tab_ask:
 
         if len(st.session_state.history) > 1:
             st.divider()
-            col_hist_hdr, col_hist_export = st.columns([3, 1])
+            col_hist_hdr, col_hist_export, col_hist_clear = st.columns([3, 1, 1])
             col_hist_hdr.markdown("#### Session history")
             buf = io.StringIO()
             writer = csv.DictWriter(buf, fieldnames=["question", "answer", "latency_ms"])
@@ -490,6 +490,9 @@ with tab_ask:
                 mime="text/csv",
                 use_container_width=True,
             )
+            if col_hist_clear.button("🗑️ Clear all", use_container_width=True, help="Delete all history"):
+                st.session_state.history = []
+                st.rerun()
             for idx, item in enumerate(reversed(st.session_state.history[:-1])):
                 real_idx = len(st.session_state.history) - 2 - idx
                 q_num = real_idx + 1
