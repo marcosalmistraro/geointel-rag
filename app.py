@@ -268,6 +268,7 @@ def _build_map() -> folium.Map:
 # ── page config ───────────────────────────────────────────────────────────────
 
 st.set_page_config(page_title="GeoIntel RAG", page_icon="🌍", layout="wide")
+
 st.title("🌍 GeoIntel RAG")
 st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake response corpus.")
 
@@ -316,7 +317,7 @@ with tab_ask:
             "❓ **Ready-made** — pick from a list of pre-written questions.  \n"
             "📍 **By province** — select a location to get a question about it.  \n"
             "✏️ **Your own** — type whatever you want to ask.  \n"
-            "Choosing one locks the other two. Hit ✕ next to the label to clear it."
+            "Choosing one locks the other two. Use ✕ inside the selector to clear it."
         )
 
         if "question" not in st.session_state:
@@ -330,6 +331,9 @@ with tab_ask:
                 st.session_state.question = val
                 st.session_state._input_mode = "example"
                 st.session_state._province_select = None
+            else:
+                st.session_state._input_mode = None
+                st.session_state.question = ""
 
         def _apply_province():
             val = st.session_state._province_select
@@ -337,6 +341,9 @@ with tab_ask:
                 st.session_state.question = PROVINCE_QUESTIONS[val]
                 st.session_state._input_mode = "province"
                 st.session_state._example_select = None
+            else:
+                st.session_state._input_mode = None
+                st.session_state.question = ""
 
         def _on_question_change():
             if st.session_state.question.strip():
@@ -346,68 +353,36 @@ with tab_ask:
             else:
                 st.session_state._input_mode = None
 
-        def _clear_example():
-            st.session_state._input_mode = None
-            st.session_state.question = ""
-            st.session_state._example_select = None
-
-        def _clear_province():
-            st.session_state._input_mode = None
-            st.session_state.question = ""
-            st.session_state._province_select = None
-
-        def _clear_manual():
-            st.session_state._input_mode = None
-            st.session_state.question = ""
-
         mode = st.session_state._input_mode
 
-        col_ex, col_ex_clr = st.columns([11, 1])
-        with col_ex:
-            st.selectbox(
-                "❓ Ready-made questions",
-                EXAMPLE_QUESTIONS,
-                index=None,
-                placeholder="Choose an option",
-                key="_example_select",
-                on_change=_apply_example,
-                disabled=(mode in ("province", "manual")),
-            )
-        with col_ex_clr:
-            st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
-            if mode == "example":
-                st.button("✕", key="_clear_example", help="Clear", on_click=_clear_example)
+        st.selectbox(
+            "❓ Ready-made questions",
+            EXAMPLE_QUESTIONS,
+            index=None,
+            placeholder="Choose an option",
+            key="_example_select",
+            on_change=_apply_example,
+            disabled=(mode in ("province", "manual")),
+        )
 
-        col_prov, col_prov_clr = st.columns([11, 1])
-        with col_prov:
-            st.selectbox(
-                "📍 Focus on a province",
-                list(PROVINCE_QUESTIONS.keys()),
-                index=None,
-                placeholder="Choose an option",
-                key="_province_select",
-                on_change=_apply_province,
-                disabled=(mode in ("example", "manual")),
-            )
-        with col_prov_clr:
-            st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
-            if mode == "province":
-                st.button("✕", key="_clear_province", help="Clear", on_click=_clear_province)
+        st.selectbox(
+            "📍 Focus on a province",
+            list(PROVINCE_QUESTIONS.keys()),
+            index=None,
+            placeholder="Choose an option",
+            key="_province_select",
+            on_change=_apply_province,
+            disabled=(mode in ("example", "manual")),
+        )
 
-        col_ta, col_ta_clr = st.columns([11, 1])
-        with col_ta:
-            question = st.text_area(
-                "✏️ Write your own",
-                key="question",
-                placeholder="Type your question here…",
-                height=100,
-                on_change=_on_question_change,
-                disabled=(mode in ("example", "province")),
-            )
-        with col_ta_clr:
-            st.markdown('<div style="height:28px"></div>', unsafe_allow_html=True)
-            if mode == "manual":
-                st.button("✕", key="_clear_manual", help="Clear", on_click=_clear_manual)
+        question = st.text_area(
+            "✏️ Write your own",
+            key="question",
+            placeholder="Type your question here…",
+            height=100,
+            on_change=_on_question_change,
+            disabled=(mode in ("example", "province")),
+        )
 
         top_k = st.slider(
             "Chunks to retrieve",
