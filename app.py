@@ -284,14 +284,14 @@ with st.sidebar:
             "- This tool lets you ask questions in plain English about what happened\n"
             "- Answers are drawn from hundreds of humanitarian situation reports published during the response by UN agencies and NGOs on the ground"
         )
-    with st.expander("What it does"):
+    with st.expander("What does it do?"):
         st.markdown(
             '- Type a question like *"What was the situation in Hatay?"* or *"How many people were displaced?"*\n'
             "- The system finds the most relevant passages from those reports\n"
             "- It does not invent anything - every answer is built from real documents\n"
             "- You can see exactly which passages were used"
         )
-    with st.expander("What it shows"):
+    with st.expander("What does it show?"):
         st.markdown(
             "- Next to the answer, an interactive map shows the earthquake's intensity zones - how hard each area was shaken\n"
             "- It also shows the locations of over 100,000 destroyed buildings, traced from satellite imagery by volunteer mappers\n"
