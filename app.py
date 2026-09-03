@@ -279,24 +279,24 @@ st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake 
 with st.sidebar:
     with st.expander("What is this?"):
         st.markdown(
-            "In February 2023, a 7.8-magnitude earthquake hit southern Turkey and northern Syria. "
-            "Over 50,000 people were killed and millions were displaced. This tool lets you ask "
-            "questions in plain English about what happened and get answers drawn from the hundreds "
-            "of humanitarian situation reports published during the response by UN agencies and NGOs on the ground."
+            "- 7.8-magnitude earthquake, February 2023\n"
+            "- Southern Turkey and northern Syria\n"
+            "- 50,000+ killed, millions displaced\n"
+            "- Answers drawn from hundreds of UN and NGO field reports"
         )
     with st.expander("What it does"):
         st.markdown(
-            'Type a question like *"What was the situation in Hatay?"* or *"How many people were displaced?"* '
-            "and the system finds the most relevant passages from those reports, then uses an AI model to put "
-            "together an answer from them. It does not invent anything - every answer is built from real "
-            "documents, and you can see exactly which passages were used."
+            "- Ask a question in plain English\n"
+            "- Finds the most relevant passages from real field reports\n"
+            "- Builds an answer from those documents only\n"
+            "- Shows exactly which passages were used"
         )
     with st.expander("What it shows"):
         st.markdown(
-            "Next to the answer, an interactive map shows the earthquake's intensity zones - how hard each "
-            "area was shaken - and the locations of over 100,000 destroyed buildings, traced from satellite "
-            "imagery by volunteer mappers after the earthquake. You can see which areas were hit hardest and "
-            "read what aid organisations reported from the ground."
+            "- Interactive map of the affected area\n"
+            "- Earthquake intensity zones by area\n"
+            "- 100,000+ destroyed buildings from satellite imagery\n"
+            "- Volunteer-mapped in the days after the earthquake"
         )
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
