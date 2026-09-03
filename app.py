@@ -198,14 +198,16 @@ def _parse_context(context: str) -> tuple[list[dict], str]:
 
 def _mmi_color(mmi: float) -> str:
     if mmi >= 8:
-        return "#d73027"
+        return "#b2182b"
     if mmi >= 7:
-        return "#f46d43"
+        return "#ef6548"
     if mmi >= 6:
-        return "#fdae61"
+        return "#fc8d59"
     if mmi >= 5:
-        return "#fee090"
-    return "#e0f3f8"
+        return "#fdbb84"
+    if mmi >= 4:
+        return "#fdd49e"
+    return "#fff7ec"
 
 
 @st.cache_resource
@@ -235,9 +237,9 @@ def _build_map() -> folium.Map:
         name="ShakeMap intensity",
         style_function=lambda feat: {
             "fillColor": _mmi_color(float(feat["properties"].get("mmi") or 0)),
-            "color": "#555",
-            "weight": 0.4,
-            "fillOpacity": 0.45,
+            "color": "#333",
+            "weight": 1.0,
+            "fillOpacity": 0.6,
         },
         tooltip=folium.GeoJsonTooltip(
             fields=["mmi", "magnitude"],
@@ -317,28 +319,26 @@ with tab_ask:
 
         # ── model picker ──────────────────────────────────────────────────────
         st.divider()
-        is_compare = st.session_state.get("_compare_mode", False)
-
-        st.markdown("**Single mode**")
-        st.caption("Pick one model. The answer streams in real time.")
-        active_model_label = st.selectbox(
-            "Model",
-            list(AVAILABLE_MODELS.keys()),
-            index=0,
-            key="_active_model",
-            disabled=is_compare,
+        st.markdown("**Model**")
+        st.caption(
+            "GPT-OSS 20B is faster. GPT-OSS 120B gives longer, more detailed answers. "
+            "Toggle compare mode to run both at once and see the results side by side."
         )
-        active_model_id = AVAILABLE_MODELS[active_model_label] if not is_compare else None
+        compare_mode = st.toggle("Compare both models", value=False, key="_compare_mode")
+        is_compare = compare_mode
 
-        st.divider()
-
-        st.markdown("**Compare mode**")
-        st.caption("Pick two models. Both run in parallel and results appear side by side.")
-        compare_mode = st.toggle("Compare two models", value=False, key="_compare_mode")
-        if compare_mode:
-            model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
-            model_b_label = st.selectbox("Model B", list(AVAILABLE_MODELS.keys()), index=1, key="_model_b")
+        if is_compare:
+            active_model_id = None
+            model_a_label = list(AVAILABLE_MODELS.keys())[0]
+            model_b_label = list(AVAILABLE_MODELS.keys())[1]
         else:
+            active_model_label = st.selectbox(
+                "Model",
+                list(AVAILABLE_MODELS.keys()),
+                index=0,
+                key="_active_model",
+            )
+            active_model_id = AVAILABLE_MODELS[active_model_label]
             model_a_label = None
             model_b_label = None
 
