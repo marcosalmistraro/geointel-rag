@@ -232,18 +232,23 @@ def _build_map() -> folium.Map:
         return m
 
     shakemap = spatial["shakemap"]
+    shakemap_json = _json.loads(shakemap.to_json())
     folium.GeoJson(
-        _json.loads(shakemap.to_json()),
+        shakemap_json,
         name="ShakeMap intensity",
         style_function=lambda feat: {
-            "fillColor": _mmi_color(float(feat["properties"].get("mmi") or feat["properties"].get("PARAMVALUE") or 0)),
+            "fillColor": _mmi_color(float(
+                feat["properties"].get("mmi")
+                or feat["properties"].get("PARAMVALUE")
+                or feat["properties"].get("value")
+                or 0
+            )),
             "color": "#333",
-            "weight": 1.0,
-            "fillOpacity": 0.6,
+            "weight": 1.5,
+            "fillOpacity": 0.75,
         },
         tooltip=folium.GeoJsonTooltip(
-            fields=["mmi", "magnitude"],
-            aliases=["MMI intensity", "Earthquake magnitude"],
+            fields=list(shakemap_json["features"][0]["properties"].keys()) if shakemap_json["features"] else [],
         ),
     ).add_to(m)
 
@@ -536,9 +541,9 @@ with tab_ask:
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
             st.caption(f"{n_contours} intensity contours · {n_buildings:,} destroyed buildings recorded")
-            if "_folium_map_html_v2" not in st.session_state:
-                st.session_state._folium_map_html_v2 = _build_map()._repr_html_()
-            st_components.html(st.session_state._folium_map_html_v2, height=560, scrolling=False)
+            if "_folium_map_html_v3" not in st.session_state:
+                st.session_state._folium_map_html_v3 = _build_map()._repr_html_()
+            st_components.html(st.session_state._folium_map_html_v3, height=560, scrolling=False)
 
     if compare_mode and st.session_state.get("_comparison"):
         st.divider()
