@@ -296,18 +296,18 @@ with st.sidebar:
             "- It does not invent anything - every answer is built from real documents\n"
             "- You can see exactly which passages were used"
         )
-    with st.expander("How does retrieval work?"):
-        st.markdown(
-            "- Your question is embedded as a vector and matched against the corpus using FAISS: the top passages are retrieved (controlled by the slider in the Ask tab)\n"
-            "- Province names found anywhere in those 5 passages trigger a spatial lookup: the retriever finds the ShakeMap intensity zone for that province and counts destroyed buildings within 50km of its centroid\n"
-            "- This is why you might see multiple provinces in the geospatial context: they appear in the retrieved passages, not necessarily in your question\n"
-            "- The intensity zones on the map (defined by contours) and the building markers are the two spatial layers the retriever queries"
-        )
     with st.expander("What does it show?"):
         st.markdown(
             "- Next to the answer, an interactive map shows the earthquake's intensity zones - how hard each area was shaken\n"
             "- It also shows the locations of over 100,000 destroyed buildings, traced from satellite imagery by volunteer mappers\n"
             "- You can see which areas were hit hardest and read what aid organisations reported from the ground"
+        )
+    with st.expander("How does retrieval work?"):
+        st.markdown(
+            "- Your question is embedded as a vector and matched against the corpus using FAISS: the top passages are retrieved (controlled by the slider in the Ask tab)\n"
+            "- Province names found anywhere in those passages trigger a spatial lookup: the retriever finds the ShakeMap intensity zone for that province and counts destroyed buildings within 50km of its centroid\n"
+            "- This is why you might see multiple provinces in the geospatial context: they appear in the retrieved passages, not necessarily in your question\n"
+            "- The intensity zones on the map (defined by contours) and the building markers are the two spatial layers the retriever queries"
         )
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
