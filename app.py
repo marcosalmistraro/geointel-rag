@@ -244,8 +244,8 @@ def _build_map() -> folium.Map:
                 or 0
             )),
             "color": "#333",
-            "weight": 3,
-            "fillOpacity": 0.5,
+            "weight": 0.4,
+            "fillOpacity": 0.45,
         },
         tooltip=folium.GeoJsonTooltip(
             fields=list(shakemap_json["features"][0]["properties"].keys()) if shakemap_json["features"] else [],
@@ -541,9 +541,9 @@ with tab_ask:
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
             st.caption(f"{n_contours} intensity contours · {n_buildings:,} destroyed buildings recorded")
-            if "_folium_map_html_v5" not in st.session_state:
-                st.session_state._folium_map_html_v5 = _build_map()._repr_html_()
-            st_components.html(st.session_state._folium_map_html_v5, height=560, scrolling=False)
+            if "_folium_map_html_v6" not in st.session_state:
+                st.session_state._folium_map_html_v6 = _build_map()._repr_html_()
+            st_components.html(st.session_state._folium_map_html_v6, height=560, scrolling=False)
 
     if compare_mode and st.session_state.get("_comparison"):
         st.divider()
