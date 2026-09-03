@@ -275,32 +275,29 @@ st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake 
 # ── sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    is_compare = st.session_state.get("_compare_mode", False)
-
-    st.markdown("**Single mode**")
-    st.caption("Pick one model. The answer streams in real time in the Ask tab.")
-    active_model_label = st.selectbox(
-        "Model",
-        list(AVAILABLE_MODELS.keys()),
-        index=0,
-        key="_active_model",
-        disabled=is_compare,
+    st.markdown("**What is this?**")
+    st.markdown(
+        "In February 2023, a 7.8-magnitude earthquake hit southern Turkey and northern Syria. "
+        "Over 50,000 people were killed and millions were displaced. This tool lets you ask "
+        "questions in plain English about what happened and get answers drawn from the hundreds "
+        "of humanitarian situation reports published during the response by UN agencies and NGOs on the ground."
     )
-    active_model_id = AVAILABLE_MODELS[active_model_label] if not is_compare else None
-
     st.divider()
-
-    st.markdown("**Compare mode**")
-    st.caption("Pick two models. Both run in parallel and results appear side by side.")
-    compare_mode = st.toggle("Compare two models", value=False, key="_compare_mode")
-    if compare_mode:
-        model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
-        model_b_label = st.selectbox("Model B", list(AVAILABLE_MODELS.keys()), index=1, key="_model_b")
-    else:
-        model_a_label = None
-        model_b_label = None
-
-    st.markdown("via [Groq API](https://groq.com)")
+    st.markdown("**What it does**")
+    st.markdown(
+        'Type a question like *"What was the situation in Hatay?"* or *"How many people were displaced?"* '
+        "and the system finds the most relevant passages from those reports, then uses an AI model to put "
+        "together an answer from them. It does not invent anything - every answer is built from real "
+        "documents, and you can see exactly which passages were used."
+    )
+    st.divider()
+    st.markdown("**What it shows**")
+    st.markdown(
+        "Next to the answer, an interactive map shows the earthquake's intensity zones - how hard each "
+        "area was shaken - and the locations of over 100,000 destroyed buildings, traced from satellite "
+        "imagery by volunteer mappers after the earthquake. You can see which areas were hit hardest and "
+        "read what aid organisations reported from the ground."
+    )
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
 
@@ -319,6 +316,35 @@ with tab_ask:
             "✏️ **Your own** - type whatever you want to ask.  \n"
             "Choosing one locks the other two. Use ✕ inside the selector to clear it."
         )
+
+        # ── model picker ──────────────────────────────────────────────────────
+        is_compare = st.session_state.get("_compare_mode", False)
+
+        st.markdown("**Single mode**")
+        st.caption("Pick one model. The answer streams in real time.")
+        active_model_label = st.selectbox(
+            "Model",
+            list(AVAILABLE_MODELS.keys()),
+            index=0,
+            key="_active_model",
+            disabled=is_compare,
+        )
+        active_model_id = AVAILABLE_MODELS[active_model_label] if not is_compare else None
+
+        st.divider()
+
+        st.markdown("**Compare mode**")
+        st.caption("Pick two models. Both run in parallel and results appear side by side.")
+        compare_mode = st.toggle("Compare two models", value=False, key="_compare_mode")
+        if compare_mode:
+            model_a_label = st.selectbox("Model A", list(AVAILABLE_MODELS.keys()), index=0, key="_model_a")
+            model_b_label = st.selectbox("Model B", list(AVAILABLE_MODELS.keys()), index=1, key="_model_b")
+        else:
+            model_a_label = None
+            model_b_label = None
+
+        st.caption("via [Groq API](https://groq.com)")
+        st.divider()
 
         if "question" not in st.session_state:
             st.session_state.question = ""
