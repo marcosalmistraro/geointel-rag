@@ -602,8 +602,7 @@ with tab_eval:
     st.subheader("RAG Evaluation")
     st.markdown(
         "- Runs 10 pre-set questions against the corpus and scores the results\n"
-        "- Answer recall checks whether the expected keywords appear in the model's response\n"
-        "- Context recall checks whether those same keywords appear in the passages retrieved from the vector index. A low score here means retrieval is missing relevant content before the model even sees it\n"
+        "- A low context recall score means retrieval is missing relevant content before the model even sees it\n"
         "- Answer length is a rough proxy for how much the model actually engaged with the question"
     )
 
