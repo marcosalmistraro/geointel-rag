@@ -600,6 +600,13 @@ with tab_eval:
     import pandas as pd
 
     st.subheader("RAG Evaluation")
+    st.markdown(
+        "Runs 10 pre-set questions against the corpus and scores the results. "
+        "Answer recall checks whether the expected keywords appear in the model's response. "
+        "Context recall checks whether those same keywords appear in the passages retrieved from the vector index - "
+        "a low score here means retrieval is missing relevant content before the model even sees it. "
+        "Answer length is a rough proxy for how much the model actually engaged with the question."
+    )
 
     eval_model_label = st.selectbox(
         "Model to evaluate",
@@ -618,6 +625,8 @@ with tab_eval:
                 i / len(EVAL_TEST_CASES),
                 text=f"Question {i + 1}/{len(EVAL_TEST_CASES)}: {case['question'][:60]}…",
             )
+            if i > 0:
+                time.sleep(6)
             t0 = time.perf_counter()
             try:
                 result = chain.run(case["question"], top_k=5, model_id=model_id)
