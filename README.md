@@ -8,22 +8,25 @@ app_file: app.py
 pinned: false
 ---
 
-# GeoIntel RAG
+# 🌍 GeoIntel RAG
 
-Natural-language intelligence over the 2023 Turkey-Syria earthquake humanitarian response corpus, combining Retrieval-Augmented Generation (RAG) with geospatial map visualisation.
+RAG-powered geospatial intelligence system over the 2023 Turkey-Syria earthquake corpus - combines FAISS vector search, ShakeMap enrichment, and Groq LLM inference with a live Streamlit dashboard.
 
-![Python](https://img.shields.io/badge/Python-3.11-blue) ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green) ![Streamlit](https://img.shields.io/badge/Streamlit-1.35-red) ![License](https://img.shields.io/badge/License-MIT-lightgrey)
+![Python](https://img.shields.io/badge/Python-3.11-blue) ![Streamlit](https://img.shields.io/badge/Streamlit-1.35-red) ![License](https://img.shields.io/badge/License-MIT-lightgrey)
 
 ---
 
-## What it does
+## What is this?
 
-Ask a question in plain English — for example *"What was the humanitarian situation in Hatay?"* — and the system:
+In February 2023, a 7.8-magnitude earthquake hit southern Turkey and northern Syria. Over 50,000 people were killed and millions were displaced. This tool lets you ask questions in plain English about what happened and get answers drawn from the hundreds of humanitarian situation reports published during the response by UN agencies and NGOs on the ground.
 
-1. **Retrieves** the most relevant passages from ReliefWeb situation reports using FAISS vector search
-2. **Enriches** the context with geospatial data (ShakeMap intensity, affected provinces)
-3. **Generates** a grounded answer via Groq (Llama 3.1 8B Instant)
-4. **Visualises** ShakeMap intensity contours and 100 k+ destroyed buildings on an interactive map
+## What does it do?
+
+Type a question like *"What was the situation in Hatay?"* or *"How many people were displaced?"* and the system finds the most relevant passages from those reports, then uses an AI model to put together an answer from them. It does not invent anything - every answer is built from real documents, and you can see exactly which passages were used.
+
+## What does it show?
+
+Next to the answer, an interactive map shows the earthquake's intensity zones - how hard each area was shaken - and the locations of over 100,000 destroyed buildings, traced from satellite imagery by volunteer mappers after the earthquake. You can see which areas were hit hardest and read what aid organisations reported from the ground.
 
 ---
 
@@ -31,29 +34,32 @@ Ask a question in plain English — for example *"What was the humanitarian situ
 
 ```
 User query
-    │
-    ▼
-Streamlit frontend  ──POST /query──►  FastAPI backend
-                                            │
-                                    ┌───────┴────────┐
-                                    │                │
-                              FAISS retriever    Spatial enricher
-                              (top-k chunks)     (province → MMI)
-                                    │                │
-                                    └───────┬────────┘
-                                            │
-                                     Groq API
-                                   (Llama 3.1 8B)
-                                            │
-                                       Answer + context
+    |
+    v
+Streamlit frontend (app.py)
+    |
+    +-- FAISS retriever (top-k chunks from ReliefWeb corpus)
+    |
+    +-- Spatial enricher (ShakeMap MMI + province info)
+    |
+    v
+Groq API (GPT-OSS 20B / 120B)
+    |
+    v
+Streamed answer + Folium map
 ```
 
-**Data sources**
+Data is downloaded from HuggingFace Hub at startup. No separate backend - everything runs inside the Streamlit app.
+
+---
+
+## Data sources
+
 | Source | Content |
 |--------|---------|
-| [ReliefWeb](https://reliefweb.int/) | Situation reports, Feb–May 2023 |
+| [ReliefWeb](https://reliefweb.int/) | Situation reports, Feb-May 2023 |
 | [USGS ShakeMap via HDX](https://data.humdata.org/dataset/50d93259-2d49-4f84-85e6-3cd0aa03dfaa) | MMI intensity contours (M7.8 + M7.5) |
-| [HOT OSM Destroyed Buildings](https://data.humdata.org/dataset/hotosm_tur_destroyed_buildings) | ~100 k destroyed/damaged buildings |
+| [HOT OSM Destroyed Buildings](https://data.humdata.org/dataset/hotosm_tur_destroyed_buildings) | ~100k destroyed/damaged buildings |
 | [OCHA Key Figures](https://data.humdata.org/dataset/turkiye-syria-earthquake-key-figures) | Key humanitarian figures |
 
 ---
@@ -62,16 +68,14 @@ Streamlit frontend  ──POST /query──►  FastAPI backend
 
 | Layer | Technology |
 |-------|-----------|
-| LLM | Llama 3.1 8B Instant via [Groq](https://groq.com) |
+| LLM | GPT-OSS 20B / 120B via [Groq](https://groq.com) |
 | Embeddings | `sentence-transformers/all-MiniLM-L6-v2` (local) |
 | Vector store | FAISS (flat L2 index) |
 | Geospatial | GeoPandas, Shapely, Folium |
-| Backend | FastAPI + Uvicorn |
-| Frontend | Streamlit + streamlit-folium |
-| Tracking | MLflow |
-| Container | Docker |
+| Frontend | Streamlit |
+| Data hosting | HuggingFace Hub |
 | CI/CD | GitHub Actions |
-| Fine-tuning | QLoRA (4-bit NF4) + LoRA adapters via `peft` + `trl` |
+| Fine-tuning | QLoRA (4-bit NF4) + LoRA adapters via `peft` + `trl` (notebook, not yet run) |
 
 ---
 
@@ -79,29 +83,24 @@ Streamlit frontend  ──POST /query──►  FastAPI backend
 
 ```
 geointel_rag/
-├── ingestion/
-│   ├── downloaders/        # ReliefWeb, USGS ShakeMap, HOT OSM, OCHA
-│   ├── loaders/            # Text + spatial loaders
-│   ├── chunker.py          # Sliding-window text chunker
-│   └── pipeline.py         # End-to-end ingestion orchestrator
+├── app.py                       # Self-contained Streamlit app (deployed)
 ├── rag/
-│   ├── embedder.py         # Sentence-transformer wrapper
-│   ├── vector_store.py     # FAISS index (save / load)
-│   ├── retriever.py        # Top-k retrieval + spatial enrichment
-│   └── chain.py            # RAG chain → Groq API
-├── api/
-│   ├── main.py             # FastAPI app + lifespan
-│   ├── schemas.py          # Pydantic request/response models
-│   └── routes/             # /health  /query  /ingest
-├── frontend/
-│   └── app.py              # Streamlit two-panel UI
-├── tracking/
-│   └── mlflow_utils.py     # MLflow logging helpers
+│   ├── embedder.py              # Sentence-transformer wrapper
+│   ├── vector_store.py          # FAISS index (save / load)
+│   ├── retriever.py             # Top-k retrieval + spatial enrichment
+│   └── chain.py                 # RAG chain -> Groq API
+├── ingestion/
+│   ├── downloaders/             # ReliefWeb, USGS ShakeMap, HOT OSM, OCHA
+│   ├── loaders/                 # Text + spatial loaders
+│   ├── chunker.py               # Sliding-window text chunker
+│   └── pipeline.py              # End-to-end ingestion orchestrator
+├── api/                         # FastAPI app (portfolio artifact, not deployed)
+├── scripts/
+│   └── download_from_hub.py     # Downloads data from HuggingFace Hub at startup
 ├── notebooks/
-│   └── 01_finetune_colab.ipynb  # QLoRA fine-tuning on Colab
-├── tests/                  # pytest unit + integration tests
-├── config.py               # Pydantic Settings (reads .env)
-├── Dockerfile
+│   └── 01_finetune_colab.ipynb  # QLoRA fine-tuning on Colab (not yet run)
+├── tests/                       # pytest unit + integration tests
+├── config.py                    # Pydantic Settings (reads .env)
 └── .github/workflows/ci.yml
 ```
 
@@ -113,7 +112,7 @@ geointel_rag/
 - Python 3.11
 - A free [Groq API key](https://console.groq.com)
 
-### 1 — Clone and install
+### 1 - Clone and install
 
 ```bash
 git clone https://github.com/marcosalmistraro/geointel-rag.git
@@ -122,7 +121,7 @@ python -m venv venv && source venv/bin/activate   # Windows: venv\Scripts\activa
 pip install -r requirements.txt
 ```
 
-### 2 — Configure environment
+### 2 - Configure environment
 
 ```bash
 cp .env.example .env   # then edit .env
@@ -133,46 +132,14 @@ GROQ_API_KEY=your_key_here
 HF_TOKEN=your_hf_token   # needed only for the fine-tuning notebook
 ```
 
-### 3 — Run the ingestion pipeline
-
-Downloads raw data, chunks text, builds the FAISS index and saves spatial layers. Safe to re-run — skips the index build if it already exists.
+### 3 - Run the app
 
 ```bash
-python -m ingestion.downloaders.run_all   # fetch raw data (~5 min)
-python -m ingestion.pipeline              # embed + index
+streamlit run app.py
+# -> http://localhost:8501
 ```
 
-### 4 — Start the API
-
-```bash
-uvicorn api.main:app --reload
-# → http://localhost:8000/docs
-```
-
-### 5 — Start the frontend
-
-```bash
-streamlit run frontend/app.py
-# → http://localhost:8501
-```
-
----
-
-## API endpoints
-
-| Method | Path | Description |
-|--------|------|-------------|
-| `GET` | `/health` | Liveness check — returns index size and model ID |
-| `POST` | `/query` | Ask a question; returns answer, context, latency |
-| `POST` | `/ingest` | Re-run the ingestion pipeline and hot-swap the chain |
-
-Example query:
-
-```bash
-curl -X POST http://localhost:8000/query \
-  -H "Content-Type: application/json" \
-  -d '{"question": "How many people were displaced in Gaziantep?", "top_k": 5}'
-```
+Data files (~49 MB) are downloaded automatically from HuggingFace Hub on first run.
 
 ---
 
@@ -182,22 +149,11 @@ curl -X POST http://localhost:8000/query \
 pytest tests/ -v
 ```
 
-38 tests covering chunking, embedding, vector store, retrieval, and all API endpoints.
-
 ---
 
 ## Fine-tuning notebook
 
-`notebooks/01_finetune_colab.ipynb` walks through QLoRA fine-tuning of Llama 3.1 on a synthetically generated earthquake QA dataset derived from the ingested corpus. Designed to run on a free Colab T4 GPU.
-
----
-
-## Docker
-
-```bash
-docker build -t geointel-rag .
-docker run -p 8000:8000 --env-file .env geointel-rag
-```
+`notebooks/01_finetune_colab.ipynb` walks through QLoRA fine-tuning of Llama 3.1 on a synthetically generated earthquake QA dataset derived from the ingested corpus. Designed to run on a free Colab T4 GPU. Not yet run - fine-tuned adapter not integrated.
 
 ---
 
