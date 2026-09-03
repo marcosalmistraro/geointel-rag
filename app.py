@@ -600,7 +600,7 @@ with tab_eval:
     import pandas as pd
 
     st.subheader("RAG Evaluation")
-    st.caption(
+    st.markdown(
         "- Runs 10 pre-set questions against the corpus and scores the results\n"
         "- A low context recall score means retrieval is missing relevant content before the model even sees it\n"
         "- Answer length is a rough proxy for how much the model actually engaged with the question"
