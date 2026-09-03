@@ -275,29 +275,27 @@ st.caption("Natural-language intelligence over the 2023 Turkey-Syria earthquake 
 # ── sidebar ───────────────────────────────────────────────────────────────────
 
 with st.sidebar:
-    st.markdown("**What is this?**")
-    st.markdown(
-        "In February 2023, a 7.8-magnitude earthquake hit southern Turkey and northern Syria. "
-        "Over 50,000 people were killed and millions were displaced. This tool lets you ask "
-        "questions in plain English about what happened and get answers drawn from the hundreds "
-        "of humanitarian situation reports published during the response by UN agencies and NGOs on the ground."
-    )
-    st.divider()
-    st.markdown("**What it does**")
-    st.markdown(
-        'Type a question like *"What was the situation in Hatay?"* or *"How many people were displaced?"* '
-        "and the system finds the most relevant passages from those reports, then uses an AI model to put "
-        "together an answer from them. It does not invent anything - every answer is built from real "
-        "documents, and you can see exactly which passages were used."
-    )
-    st.divider()
-    st.markdown("**What it shows**")
-    st.markdown(
-        "Next to the answer, an interactive map shows the earthquake's intensity zones - how hard each "
-        "area was shaken - and the locations of over 100,000 destroyed buildings, traced from satellite "
-        "imagery by volunteer mappers after the earthquake. You can see which areas were hit hardest and "
-        "read what aid organisations reported from the ground."
-    )
+    with st.expander("What is this?"):
+        st.markdown(
+            "In February 2023, a 7.8-magnitude earthquake hit southern Turkey and northern Syria. "
+            "Over 50,000 people were killed and millions were displaced. This tool lets you ask "
+            "questions in plain English about what happened and get answers drawn from the hundreds "
+            "of humanitarian situation reports published during the response by UN agencies and NGOs on the ground."
+        )
+    with st.expander("What it does"):
+        st.markdown(
+            'Type a question like *"What was the situation in Hatay?"* or *"How many people were displaced?"* '
+            "and the system finds the most relevant passages from those reports, then uses an AI model to put "
+            "together an answer from them. It does not invent anything - every answer is built from real "
+            "documents, and you can see exactly which passages were used."
+        )
+    with st.expander("What it shows"):
+        st.markdown(
+            "Next to the answer, an interactive map shows the earthquake's intensity zones - how hard each "
+            "area was shaken - and the locations of over 100,000 destroyed buildings, traced from satellite "
+            "imagery by volunteer mappers after the earthquake. You can see which areas were hit hardest and "
+            "read what aid organisations reported from the ground."
+        )
 
 # ── tabs ──────────────────────────────────────────────────────────────────────
 
@@ -318,6 +316,7 @@ with tab_ask:
         )
 
         # ── model picker ──────────────────────────────────────────────────────
+        st.divider()
         is_compare = st.session_state.get("_compare_mode", False)
 
         st.markdown("**Single mode**")
@@ -343,7 +342,6 @@ with tab_ask:
             model_a_label = None
             model_b_label = None
 
-        st.caption("via [Groq API](https://groq.com)")
         st.divider()
 
         if "question" not in st.session_state:
