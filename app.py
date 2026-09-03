@@ -236,7 +236,7 @@ def _build_map() -> folium.Map:
         _json.loads(shakemap.to_json()),
         name="ShakeMap intensity",
         style_function=lambda feat: {
-            "fillColor": _mmi_color(float(feat["properties"].get("mmi") or 0)),
+            "fillColor": _mmi_color(float(feat["properties"].get("mmi") or feat["properties"].get("PARAMVALUE") or 0)),
             "color": "#333",
             "weight": 1.0,
             "fillOpacity": 0.6,
@@ -309,16 +309,8 @@ with tab_ask:
 
     with col_qa:
         st.subheader("Ask a question")
-        st.caption(
-            "❓ **Ready-made** - pick from a list of pre-written questions.  \n"
-            "📍 **By province** - select a location to get a question about it.  \n"
-            "✏️ **Your own** - type whatever you want to ask.  \n"
-            "Choosing one locks the other two. Use ✕ inside the selector to clear it."
-        )
 
         # ── model picker ──────────────────────────────────────────────────────
-        st.divider()
-        st.markdown("**Model**")
         st.caption(
             "GPT-OSS 20B is faster. GPT-OSS 120B gives longer, more detailed answers. "
             "Toggle compare mode to run both at once and see the results side by side."
@@ -342,6 +334,13 @@ with tab_ask:
             model_b_label = None
 
         st.divider()
+
+        st.caption(
+            "❓ **Ready-made** - pick from a list of pre-written questions.  \n"
+            "📍 **By province** - select a location to get a question about it.  \n"
+            "✏️ **Your own** - type whatever you want to ask.  \n"
+            "Choosing one locks the other two. Use ✕ inside the selector to clear it."
+        )
 
         if "question" not in st.session_state:
             st.session_state.question = ""
@@ -537,9 +536,9 @@ with tab_ask:
             n_buildings = len(spatial["buildings"])
             n_contours = len(spatial["shakemap"])
             st.caption(f"{n_contours} intensity contours · {n_buildings:,} destroyed buildings recorded")
-            if "_folium_map_html" not in st.session_state:
-                st.session_state._folium_map_html = _build_map()._repr_html_()
-            st_components.html(st.session_state._folium_map_html, height=560, scrolling=False)
+            if "_folium_map_html_v2" not in st.session_state:
+                st.session_state._folium_map_html_v2 = _build_map()._repr_html_()
+            st_components.html(st.session_state._folium_map_html_v2, height=560, scrolling=False)
 
     if compare_mode and st.session_state.get("_comparison"):
         st.divider()
