@@ -298,7 +298,7 @@ with st.sidebar:
         )
     with st.expander("How does retrieval work?"):
         st.markdown(
-            "- Your question is embedded as a vector and matched against the corpus using FAISS: the 5 most semantically similar passages are retrieved\n"
+            "- Your question is embedded as a vector and matched against the corpus using FAISS: the top passages are retrieved (controlled by the slider in the Ask tab)\n"
             "- Province names found anywhere in those 5 passages trigger a spatial lookup: the retriever finds the ShakeMap intensity zone for that province and counts destroyed buildings within 50km of its centroid\n"
             "- This is why you might see multiple provinces in the geospatial context: they appear in the retrieved passages, not necessarily in your question\n"
             "- The intensity zones on the map (defined by contours) and the building markers are the two spatial layers the retriever queries"
